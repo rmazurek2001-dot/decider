@@ -1,19 +1,17 @@
 import dagre from 'dagre'
 import { Node, Edge } from 'reactflow'
 
-// 🎯 ULTRA GIGANTYCZNE WYMIARY - 3000×2250px (o 50% większe)
 const nodeWidth = 3000
 const nodeHeight = 2250
 const sectionHeaderHeight = 450
-const sectionSpacing = 100  // Odstęp między sekcjami
-const minMilestoneSpacing = 300  // ⬆️ Zwiększone z 100 - więcej przestrzeni między milestone'ami 
+const sectionSpacing = 100
+const minMilestoneSpacing = 300
 
 const sectionOrder = [
   'general', 'transport', 'accommodation', 'food', 'activities', 
   'entertainment', 'services', 'equipment', 'other',
 ]
 
-// ... getLayoutedElements (bez zmian) ...
 export const getLayoutedElements = (nodes: Node[], edges: Edge[], direction: 'TB' | 'LR' = 'TB') => {
   const dagreGraph = new dagre.graphlib.Graph()
   dagreGraph.setDefaultEdgeLabel(() => ({}))
@@ -77,9 +75,8 @@ export const getChronologicalLayout = (
       const startY = runningY
       const isEven = globalMilestoneIndex % 2 === 0
       
-      // 🎯 Szeroko rozstawione dla lepszej czytelności
       const milestoneX = isEven ? -3500 : 3500
-      const optionsX = isEven ? milestoneX - 5500 : milestoneX + 5500  // ⬆️ Zwiększone z 4500 - więcej przestrzeni w poziomie
+      const optionsX = isEven ? milestoneX - 5500 : milestoneX + 5500
       
       const { nodes: treeNodes, height: treeHeight } = layoutNodeTree(
         rootNode,
@@ -116,8 +113,8 @@ function layoutNodeTree(
   const isCollapsed = collapsedSet.has(nodeIdStr)
   
   const FIXED_HEIGHT = 2250
-  const SPACING = 300  // ⬆️ Zwiększone z 100 - więcej przestrzeni między opcjami
-  const TOTAL_STEP = FIXED_HEIGHT + SPACING; // 2550px
+  const SPACING = 300
+  const TOTAL_STEP = FIXED_HEIGHT + SPACING;
   
   const nodeX = depth === 0 ? milestoneX : optionsX
   
@@ -149,12 +146,10 @@ function layoutNodeTree(
         hidden: false
     });
     
-    // 🔄 REKURENCJA: Układaj również dzieci tego dziecka (głębsze poziomy)
     const grandchildren = allNodes.filter(n => String(n.data.parent) === childIdStr)
     
     if (grandchildren.length > 0) {
       if (isChildCollapsed) {
-        // Jeśli dziecko jest zwinięte, ukryj jego dzieci ale daj im pozycje
         grandchildren.forEach(gc => {
           layoutedNodes.push({
             ...gc,
@@ -163,7 +158,6 @@ function layoutNodeTree(
           })
         })
       } else {
-        // Jeśli dziecko jest rozwinięte, układaj jego dzieci rekurencyjnie
         let grandchildY = currentChildY + TOTAL_STEP
         grandchildren.sort((a, b) => (a.data.order || 0) - (b.data.order || 0))
         
@@ -171,17 +165,16 @@ function layoutNodeTree(
           const { nodes: gcNodes, height: gcHeight } = layoutNodeTree(
             gc,
             allNodes,
-            depth + 2, // Głębszy poziom
+            depth + 2,
             grandchildY,
             milestoneX,
-            optionsX + 5500, // Przesunięcie w prawo dla głębszych poziomów
+            optionsX + 5500,
             collapsedSet
           )
           layoutedNodes.push(...gcNodes)
           grandchildY += gcHeight + SPACING
         })
         
-        // Zwiększ currentChildY o wysokość wszystkich grandchildren
         const grandchildrenHeight = grandchildren.length * TOTAL_STEP
         currentChildY += grandchildrenHeight
       }

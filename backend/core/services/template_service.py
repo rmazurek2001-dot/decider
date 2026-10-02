@@ -1,4 +1,3 @@
-# Template Service - Predefiniowane szablony projektów
 
 TEMPLATES = {
     'wedding': {
@@ -12,7 +11,7 @@ TEMPLATES = {
                 'node_type': 'milestone',
                 'section': 'accommodation',
                 'order': 0,
-                'estimated_cost_percent': 0,  # Milestone bez kosztu
+                'estimated_cost_percent': 0,
                 'children': [
                     {
                         'title': 'Sala w Hotelu (200 osób)',

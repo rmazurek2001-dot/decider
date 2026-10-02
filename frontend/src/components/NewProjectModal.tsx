@@ -39,7 +39,6 @@ const NewProjectModal = ({ isOpen, onClose, onProjectCreated }: NewProjectModalP
   const { t } = useLanguage()
   const navigate = useNavigate()
 
-  // Załaduj szablony przy otwarciu modala
   useEffect(() => {
     if (isOpen && mode === 'template' && templates.length === 0) {
       loadTemplates()
@@ -85,7 +84,6 @@ const NewProjectModal = ({ isOpen, onClose, onProjectCreated }: NewProjectModalP
 
     try {
       if (mode === 'ai') {
-        // AI Builder mode
         const response = await axios.post(`${API_URL}/api/projects/build_from_notes/`, {
           notes: aiNotes,
           budget_total: formData.budget_total || '10000.00',
@@ -99,7 +97,6 @@ const NewProjectModal = ({ isOpen, onClose, onProjectCreated }: NewProjectModalP
         
         navigate(`/project/${projectId}?autoLayout=true`)
       } else if (mode === 'template') {
-        // Template mode
         if (!selectedTemplate) {
           setError(t.newProject.selectTemplateFirst)
           setLoading(false)
@@ -120,7 +117,6 @@ const NewProjectModal = ({ isOpen, onClose, onProjectCreated }: NewProjectModalP
         
         navigate(`/project/${projectId}?autoLayout=true`)
       } else {
-        // Manual mode
         await axios.post(`${API_URL}/api/projects/`, {
           title: formData.title,
           description: formData.description,
@@ -168,7 +164,6 @@ const NewProjectModal = ({ isOpen, onClose, onProjectCreated }: NewProjectModalP
     <AnimatePresence>
       {isOpen && (
         <>
-          {/* Backdrop */}
           <motion.div
             variants={backdropVariants}
             initial="hidden"
@@ -178,7 +173,6 @@ const NewProjectModal = ({ isOpen, onClose, onProjectCreated }: NewProjectModalP
             className="fixed inset-0 bg-black/30 backdrop-blur-sm z-40"
           />
 
-          {/* Modal */}
           <motion.div
             variants={modalVariants}
             initial="hidden"
@@ -187,7 +181,6 @@ const NewProjectModal = ({ isOpen, onClose, onProjectCreated }: NewProjectModalP
             className="fixed inset-0 flex items-center justify-center z-50 p-4"
           >
             <div className="bg-white/95 backdrop-blur-xl rounded-2xl border border-white/40 shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-hidden flex flex-col">
-              {/* Header */}
               <div className="bg-gradient-to-r from-indigo-600 to-indigo-700 text-white p-6 flex justify-between items-center border-b border-indigo-800/30">
                 <h2 className="text-2xl font-bold">{t.newProject.title}</h2>
                 <motion.button
@@ -200,10 +193,8 @@ const NewProjectModal = ({ isOpen, onClose, onProjectCreated }: NewProjectModalP
                 </motion.button>
               </div>
 
-              {/* Form */}
               <form onSubmit={handleSubmit} className="flex-1 overflow-y-auto">
                 <div className="p-6 space-y-4">
-                  {/* Mode Tabs */}
                   <div className="flex gap-2 p-1 bg-slate-100 rounded-lg">
                     <button
                       type="button"
@@ -253,7 +244,6 @@ const NewProjectModal = ({ isOpen, onClose, onProjectCreated }: NewProjectModalP
                     </button>
                   </div>
 
-                  {/* Manual Mode */}
                   {mode === 'manual' && (
                     <>
                       <div>
@@ -303,7 +293,6 @@ const NewProjectModal = ({ isOpen, onClose, onProjectCreated }: NewProjectModalP
                     </>
                   )}
 
-                  {/* AI Mode */}
                   {mode === 'ai' && (
                     <>
                       <div className="bg-gradient-to-br from-purple-50 to-indigo-50 border border-purple-200 rounded-xl p-4 mb-4">
@@ -358,7 +347,6 @@ const NewProjectModal = ({ isOpen, onClose, onProjectCreated }: NewProjectModalP
                     </>
                   )}
 
-                  {/* Template Mode */}
                   {mode === 'template' && (
                     <>
                       {!selectedTemplate ? (
@@ -460,7 +448,6 @@ const NewProjectModal = ({ isOpen, onClose, onProjectCreated }: NewProjectModalP
                     </>
                   )}
 
-                  {/* Error Message */}
                   {error && (
                     <motion.div
                       initial={{ opacity: 0, y: -10 }}
@@ -472,7 +459,6 @@ const NewProjectModal = ({ isOpen, onClose, onProjectCreated }: NewProjectModalP
                   )}
                 </div>
 
-                {/* Buttons */}
                 <div className="flex gap-3 p-6 border-t border-slate-200 bg-slate-50/50">
                   <motion.button
                     whileHover={{ scale: 1.02 }}

@@ -83,7 +83,6 @@ const ProjectDashboard = () => {
 
   return (
     <div className="min-h-screen p-8">
-      {/* Header */}
       <motion.div
         initial={{ opacity: 0, y: -20 }}
         animate={{ opacity: 1, y: 0 }}
@@ -94,7 +93,6 @@ const ProjectDashboard = () => {
         <p className="text-slate-600">{t.dashboard.title}</p>
       </motion.div>
 
-      {/* Create Project Button */}
       <motion.button
         whileHover={{ scale: 1.05 }}
         whileTap={{ scale: 0.95 }}
@@ -105,7 +103,6 @@ const ProjectDashboard = () => {
         {t.dashboard.createNew}
       </motion.button>
 
-      {/* Projects Grid */}
       {projects.length === 0 ? (
         <motion.div
           initial={{ opacity: 0, scale: 0.95 }}
@@ -150,7 +147,6 @@ const ProjectDashboard = () => {
                 onClick={() => navigate(`/project/${project.id}`)}
                 className="bg-white/90 backdrop-blur-xl rounded-2xl border border-white/40 p-6 cursor-pointer shadow-[0_8px_30px_rgb(0,0,0,0.04)] hover:shadow-[0_12px_40px_rgb(0,0,0,0.08)] transition-all"
               >
-                {/* Header */}
                 <div className="mb-4">
                   <div className="flex items-start justify-between mb-2">
                     <h3 className="text-lg font-semibold text-slate-900 line-clamp-2">
@@ -165,7 +161,6 @@ const ProjectDashboard = () => {
                   <p className="text-sm text-slate-600 line-clamp-2">{project.description}</p>
                 </div>
 
-                {/* Budget Progress */}
                 <div className="mb-4">
                   <div className="flex items-center justify-between mb-2">
                     <span className="text-xs font-medium text-slate-600">{t.common.budget}</span>
@@ -183,7 +178,6 @@ const ProjectDashboard = () => {
                   </div>
                 </div>
 
-                {/* Footer */}
                 <div className="flex items-center justify-between pt-4 border-t border-slate-200">
                   <div className="flex items-center gap-2 text-xs text-slate-600">
                     <Calendar className="w-4 h-4" />
@@ -204,7 +198,6 @@ const ProjectDashboard = () => {
         </motion.div>
       )}
 
-      {/* New Project Modal */}
       <NewProjectModal
         isOpen={isModalOpen}
         onClose={() => setIsModalOpen(false)}

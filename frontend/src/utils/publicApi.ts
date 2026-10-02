@@ -1,11 +1,7 @@
-/**
- * Public API - endpointy bez autoryzacji dla udostępnionych projektów
- */
 import axios from 'axios'
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000'
 
-// Osobna instancja axios BEZ tokena autoryzacji
 const publicAxios = axios.create({
   baseURL: API_URL,
 })
@@ -86,25 +82,16 @@ export interface PublicTasksResponse {
   }
 }
 
-/**
- * Pobiera dane projektu (bez autoryzacji)
- */
 export const fetchPublicProject = async (token: string): Promise<PublicProject> => {
   const response = await publicAxios.get(`/api/public/projects/${token}/`)
   return response.data
 }
 
-/**
- * Pobiera drzewo decyzyjne projektu (bez autoryzacji)
- */
 export const fetchPublicTree = async (token: string): Promise<PublicDecisionNode[]> => {
   const response = await publicAxios.get(`/api/public/projects/${token}/tree/`)
   return response.data
 }
 
-/**
- * Pobiera zadania projektu (bez autoryzacji)
- */
 export const fetchPublicTasks = async (token: string): Promise<PublicTasksResponse> => {
   const response = await publicAxios.get(`/api/public/projects/${token}/tasks/`)
   return response.data

@@ -32,7 +32,7 @@ interface DecisionNode {
   project: number
   children: DecisionNode[]
   vote_count: number
-  path_cost?: number  // P1 FIX: Backend teraz zwraca path_cost
+  path_cost?: number
 }
 
 interface Project {
@@ -80,7 +80,6 @@ const PublicProjectView = ({ token }: PublicProjectViewProps) => {
         const x = level * 320 + 100
         const y = index * 180 + 100
 
-        // P1 FIX: Używamy path_cost z backendu zamiast lokalnej kalkulacji
         const pathCost = nodeData.path_cost || parseFloat(nodeData.estimated_cost)
         const exceedsBudget = pathCost > projectBudget
 
@@ -266,7 +265,6 @@ const PublicProjectView = ({ token }: PublicProjectViewProps) => {
             </div>
           </div>
           
-          {/* P3 FIX: Banner informujący o trybie read-only */}
           <div className="absolute top-4 left-1/2 -translate-x-1/2 bg-gradient-to-r from-amber-50 to-amber-100 border border-amber-300 rounded-lg px-4 py-2 z-10 shadow-md">
             <p className="text-sm text-amber-900 font-medium flex items-center gap-2">
               <span>👁️</span>

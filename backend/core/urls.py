@@ -23,7 +23,6 @@ urlpatterns = [
     path('public/projects/<uuid:token>/', public_project_view, name='public-project'),
     path('public/projects/<uuid:token>/tree/', public_project_tree_view, name='public-project-tree'),
     path('public/projects/<uuid:token>/tasks/', public_project_tasks_view, name='public-project-tasks'),
-    # Testing endpoints (DEBUG only)
     path('testing/seed-project/', seed_test_project, name='seed-test-project'),
 ]
 

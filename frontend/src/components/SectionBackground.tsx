@@ -23,7 +23,6 @@ const getSectionStyle = (section: string) => {
 const SectionBackground = ({ section, nodes }: SectionBackgroundProps) => {
   if (nodes.length === 0) return null
 
-  // Oblicz bounding box dla wszystkich węzłów w sekcji
   const minX = Math.min(...nodes.map(n => n.x)) - 40
   const minY = Math.min(...nodes.map(n => n.y)) - 40
   const maxX = Math.max(...nodes.map(n => n.x + n.width)) + 40

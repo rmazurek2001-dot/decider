@@ -32,7 +32,7 @@ interface NodeSidebarProps {
   onNodesGenerated: () => void
   onNodeUpdated: (forceRefresh?: boolean) => void
   onNodeDeleted: () => void
-  isReadOnly?: boolean // ✅ DODANO - flaga trybu Read-Only
+  isReadOnly?: boolean
 }
 
 const NodeSidebar = ({
@@ -42,7 +42,7 @@ const NodeSidebar = ({
   onNodesGenerated,
   onNodeUpdated,
   onNodeDeleted,
-  isReadOnly = false, // ✅ DODANO - domyślnie false
+  isReadOnly = false,
 }: NodeSidebarProps) => {
   const [formData, setFormData] = useState({
     title: '',
@@ -66,7 +66,6 @@ const NodeSidebar = ({
   const [sendingComment, setSendingComment] = useState(false)
   const { t } = useLanguage()
 
-  // Załaduj author_name z localStorage
   useEffect(() => {
     const savedAuthor = localStorage.getItem('comment_author_name')
     if (savedAuthor) {
@@ -123,11 +122,9 @@ const NodeSidebar = ({
         setSuccess(null)
       }, 1000)
     } catch (err: any) {
-      // P1 FIX: Lepszy feedback dla błędów walidacji budżetu
       let errorMessage = t.node.failedToSaveChanges
       
       if (err.response?.status === 400 && err.response?.data) {
-        // Błąd walidacji z backendu
         const validationErrors = err.response.data
         if (typeof validationErrors === 'object') {
           errorMessage = Object.values(validationErrors).flat().join(', ')
@@ -189,7 +186,7 @@ const NodeSidebar = ({
 
       setSuccess(t.node.childNodeAdded)
       setTimeout(() => {
-        onNodeUpdated(true) // Force refresh bo dodano nowy węzeł
+        onNodeUpdated(true)
         setSuccess(null)
       }, 1000)
     } catch (err: any) {
@@ -221,7 +218,6 @@ const NodeSidebar = ({
         }, 1500)
       }
     } catch (err: any) {
-      // P3 FIX: Lepszy feedback dla różnych typów błędów
       let errorMessage = t.node.failedToGenerateOptions
       
       if (err.response?.status === 429) {
@@ -332,7 +328,6 @@ const NodeSidebar = ({
     setError(null)
 
     try {
-      // Zapisz author_name do localStorage
       localStorage.setItem('comment_author_name', newCommentAuthor.trim())
 
       await axios.post(`${API_URL}/api/comments/`, {
@@ -382,7 +377,6 @@ const NodeSidebar = ({
         data-testid="node-sidebar"
         className="fixed right-0 top-0 md:h-full w-full md:w-96 h-[80vh] md:top-0 bottom-0 md:bottom-auto bg-white/95 backdrop-blur-xl shadow-2xl z-50 flex flex-col border-l md:border-l border-t md:border-t-0 border-white/40 rounded-t-3xl md:rounded-t-none"
       >
-        {/* Header */}
         <div className="bg-gradient-to-r from-indigo-600 to-indigo-700 text-white p-6 flex justify-between items-center border-b border-indigo-800/30">
           <div>
             <h2 className="text-lg font-semibold">{t.node.nodeDetails}</h2>
@@ -397,9 +391,7 @@ const NodeSidebar = ({
           </button>
         </div>
 
-        {/* Content */}
         <div className="flex-1 overflow-y-auto flex flex-col">
-          {/* Tabs */}
           <div className="flex border-b border-slate-200 bg-slate-50/50">
             <button
               onClick={() => setActiveTab('details')}
@@ -429,11 +421,9 @@ const NodeSidebar = ({
             </button>
           </div>
 
-          {/* Tab Content */}
           <div className="flex-1 overflow-y-auto p-6">
             {activeTab === 'details' ? (
               <div className="space-y-6">
-          {/* Basic Info Section */}
           <section className="space-y-4">
             <div className="flex items-center gap-2 text-slate-700 font-semibold">
               <FileText className="w-4 h-4" />
@@ -469,7 +459,6 @@ const NodeSidebar = ({
             </div>
           </section>
 
-          {/* Financials Section */}
           <section className="space-y-4">
             <div className="flex items-center gap-2 text-slate-700 font-semibold">
               <DollarSign className="w-4 h-4" />
@@ -530,7 +519,6 @@ const NodeSidebar = ({
             </div>
           </section>
 
-          {/* Community Section */}
           {node.vote_count !== undefined && (
             <section className="space-y-4">
               <div className="flex items-center gap-2 text-slate-700 font-semibold">
@@ -548,7 +536,6 @@ const NodeSidebar = ({
             </section>
           )}
 
-          {/* Multi-dimensional Scores Section */}
           <section className="space-y-4">
             <div className="flex items-center gap-2 text-slate-700 font-semibold">
               <BarChart3 className="w-4 h-4" />
@@ -618,14 +605,12 @@ const NodeSidebar = ({
             </div>
           </section>
 
-          {/* Status Section */}
           <section className="space-y-4">
             <div className="flex items-center gap-2 text-slate-700 font-semibold">
               <CheckCircle className="w-4 h-4" />
               <h3 className="text-sm uppercase tracking-wide">{t.node.decisionStatus}</h3>
             </div>
 
-            {/* Read-Only Mode - tylko wyświetlanie statusu */}
             {isReadOnly ? (
               <div className="py-3 px-4 rounded-lg bg-slate-100 border border-slate-200">
                 <div className="flex items-center gap-2">
@@ -650,7 +635,6 @@ const NodeSidebar = ({
                 </div>
               </div>
             ) : (
-              /* Editable Mode - przyciski zmiany statusu */
               <div className="grid grid-cols-3 gap-2">
               <button
                 onClick={async () => {
@@ -658,10 +642,8 @@ const NodeSidebar = ({
                   
                   const newStatus = 'pending'
                   
-                  // Najpierw zaktualizuj UI
                   handleInputChange('status', newStatus)
                   
-                  // Natychmiast zapisz do backendu (bez setTimeout!)
                   setLoading(true)
                   try {
                     await axios.patch(`${API_URL}/api/decision-nodes/${node.id}/`, {
@@ -672,7 +654,7 @@ const NodeSidebar = ({
                       score_risk: formData.score_risk,
                       score_time: formData.score_time,
                       score_pleasure: formData.score_pleasure,
-                      status: newStatus, // Użyj nowego statusu bezpośrednio!
+                      status: newStatus,
                     })
                     setSuccess(t.node.statusChangedToPending)
                     setTimeout(() => {
@@ -701,10 +683,8 @@ const NodeSidebar = ({
                   
                   const newStatus = 'selected'
                   
-                  // Najpierw zaktualizuj UI
                   handleInputChange('status', newStatus)
                   
-                  // Natychmiast zapisz do backendu (bez setTimeout!)
                   setLoading(true)
                   try {
                     await axios.patch(`${API_URL}/api/decision-nodes/${node.id}/`, {
@@ -715,7 +695,7 @@ const NodeSidebar = ({
                       score_risk: formData.score_risk,
                       score_time: formData.score_time,
                       score_pleasure: formData.score_pleasure,
-                      status: newStatus, // Użyj nowego statusu bezpośrednio!
+                      status: newStatus,
                     })
                     setSuccess(t.node.optionSelected)
                     setTimeout(() => {
@@ -745,10 +725,8 @@ const NodeSidebar = ({
                   
                   const newStatus = 'rejected'
                   
-                  // Najpierw zaktualizuj UI
                   handleInputChange('status', newStatus)
                   
-                  // Natychmiast zapisz do backendu (bez setTimeout!)
                   setLoading(true)
                   try {
                     await axios.patch(`${API_URL}/api/decision-nodes/${node.id}/`, {
@@ -759,7 +737,7 @@ const NodeSidebar = ({
                       score_risk: formData.score_risk,
                       score_time: formData.score_time,
                       score_pleasure: formData.score_pleasure,
-                      status: newStatus, // Użyj nowego statusu bezpośrednio!
+                      status: newStatus,
                     })
                     setSuccess(t.node.optionRejected)
                     setTimeout(() => {
@@ -787,7 +765,6 @@ const NodeSidebar = ({
             )}
           </section>
 
-          {/* Action Plan Section - tylko dla wybranych węzłów */}
           {formData.status === 'selected' && (
             <section className="space-y-3 pt-4 border-t border-slate-200">
               <div className="flex items-center justify-between mb-4">
@@ -802,8 +779,6 @@ const NodeSidebar = ({
                 )}
               </div>
 
-              {/* Generate Tasks Button */}
-              {/* Generate Tasks Button - ukryty w trybie Read-Only */}
               {!isReadOnly && (
                 <button
                   onClick={handleGenerateTasks}
@@ -828,7 +803,6 @@ const NodeSidebar = ({
                 </button>
               )}
 
-              {/* Tasks List */}
               {tasks.length > 0 && (
                 <div className="space-y-2 mt-4">
                   {tasks.map((task) => (
@@ -842,7 +816,7 @@ const NodeSidebar = ({
                           checked={task.is_completed}
                           onChange={(e) => handleToggleTask(task.id, e.target.checked)}
                           className="mt-0.5 w-4 h-4 accent-indigo-500 cursor-pointer"
-                          disabled={isReadOnly} // ✅ Zablokowane w trybie Read-Only
+                          disabled={isReadOnly}
                         />
                         <div className="flex-1 min-w-0">
                           <span
@@ -861,11 +835,10 @@ const NodeSidebar = ({
                               onChange={(e) => handleUpdateTaskDueDate(task.id, e.target.value || null)}
                               className="text-xs px-2 py-1 border border-slate-200 rounded focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
                               placeholder={t.globalActionBoard.setDueDate}
-                              disabled={isReadOnly} // ✅ Zablokowane w trybie Read-Only
+                              disabled={isReadOnly}
                             />
                           </div>
                         </div>
-                        {/* Przycisk usuwania - ukryty w trybie Read-Only */}
                         {!isReadOnly && (
                           <button
                             onClick={() => handleDeleteTask(task.id)}
@@ -881,7 +854,6 @@ const NodeSidebar = ({
                 </div>
               )}
 
-              {/* Add Task Input - ukryte w trybie Read-Only */}
               {!isReadOnly && (
                 <div className="flex gap-2 mt-3">
                   <input
@@ -908,21 +880,18 @@ const NodeSidebar = ({
             </section>
           )}
 
-          {/* Error Message */}
           {error && (
             <div className="p-4 bg-gradient-to-br from-red-50 to-red-100/50 border border-red-200/50 rounded-lg backdrop-blur-sm">
               <p className="text-sm text-red-700 font-medium">{error}</p>
             </div>
           )}
 
-          {/* Success Message */}
           {success && (
             <div className="p-4 bg-gradient-to-br from-emerald-50 to-emerald-100/50 border border-emerald-200/50 rounded-lg backdrop-blur-sm">
               <p className="text-sm text-emerald-700 font-medium">{success}</p>
             </div>
           )}
 
-          {/* Actions Section */}
           <section className="space-y-3 pt-4 border-t border-slate-200">
             <div className="flex items-center gap-2 text-slate-700 font-semibold mb-4">
               <Sparkles className="w-4 h-4" />
@@ -985,14 +954,12 @@ const NodeSidebar = ({
           </section>
               </div>
             ) : (
-              /* Discussion Tab - Komentarze */
               <div className="space-y-4">
                 <div className="flex items-center gap-2 text-slate-700 font-semibold mb-4">
                   <MessageCircle className="w-4 h-4" />
                   <h3 className="text-sm uppercase tracking-wide">{t.comments.title}</h3>
                 </div>
 
-                {/* Lista komentarzy */}
                 <div className="space-y-3 mb-4 max-h-96 overflow-y-auto">
                   {comments.length === 0 ? (
                     <div className="text-center py-8 text-slate-400">
@@ -1030,7 +997,6 @@ const NodeSidebar = ({
                   )}
                 </div>
 
-                {/* Formularz dodawania komentarza */}
                 <div className="border-t border-slate-200 pt-4 space-y-3">
                   <input
                     type="text"

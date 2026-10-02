@@ -47,7 +47,6 @@ const ProjectTimeline = ({ projectId, onNodeClick }: ProjectTimelineProps) => {
         is_completed: isCompleted,
       })
 
-      // Optimistic update
       setTasks((prev) =>
         prev.map((task) =>
           task.id === taskId ? { ...task, is_completed: isCompleted } : task
@@ -58,7 +57,6 @@ const ProjectTimeline = ({ projectId, onNodeClick }: ProjectTimelineProps) => {
     }
   }
 
-  // Grupowanie zadań po miesiącach
   const groupTasksByMonth = (): TasksByMonth => {
     const grouped: TasksByMonth = {}
     const unscheduled: ProjectTask[] = []
@@ -157,7 +155,6 @@ const ProjectTimeline = ({ projectId, onNodeClick }: ProjectTimelineProps) => {
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 py-12 px-6">
       <div className="max-w-4xl mx-auto">
-        {/* Header */}
         <div className="text-center mb-12">
           <h1 className="text-4xl font-bold text-slate-800 mb-3 flex items-center justify-center gap-3">
             <Calendar className="w-10 h-10 text-indigo-600" />
@@ -166,12 +163,9 @@ const ProjectTimeline = ({ projectId, onNodeClick }: ProjectTimelineProps) => {
           <p className="text-slate-600">{t.timeline.subtitle}</p>
         </div>
 
-        {/* Timeline */}
         <div className="relative">
-          {/* Vertical Line */}
           <div className="absolute left-8 top-0 bottom-0 w-0.5 bg-gradient-to-b from-indigo-200 via-indigo-300 to-indigo-200" />
 
-          {/* Unscheduled Tasks */}
           {unscheduledTasks.length > 0 && (
             <div className="mb-16">
               <div className="flex items-center gap-4 mb-6">
@@ -202,22 +196,18 @@ const ProjectTimeline = ({ projectId, onNodeClick }: ProjectTimelineProps) => {
             </div>
           )}
 
-          {/* Monthly Groups */}
           {monthKeys.map((monthKey, index) => (
             <div key={monthKey} className={index > 0 ? 'mt-16' : ''}>
-              {/* Month Header */}
               <div className="flex items-center gap-4 mb-6">
                 <div className="relative">
                   <div className="w-16 h-16 rounded-full bg-gradient-to-br from-indigo-500 to-indigo-600 flex items-center justify-center shadow-lg">
                     <Calendar className="w-8 h-8 text-white" />
                   </div>
-                  {/* Connector dot */}
                   <div className="absolute -left-[22px] top-1/2 -translate-y-1/2 w-4 h-4 rounded-full bg-indigo-500 border-4 border-white shadow" />
                 </div>
                 <h2 className="text-2xl font-bold text-slate-800">{monthKey}</h2>
               </div>
 
-              {/* Tasks for this month */}
               <div className="ml-24 space-y-4">
                 {tasksByMonth[monthKey].map((task) => (
                   <TaskCard
@@ -272,7 +262,6 @@ const TaskCard = ({
           : 'border-indigo-500'
       }`}
     >
-      {/* Timeline dot */}
       <div
         className={`absolute -left-[54px] top-6 w-3 h-3 rounded-full border-4 border-white shadow ${
           task.is_completed
@@ -284,7 +273,6 @@ const TaskCard = ({
       />
 
       <div className="flex items-start gap-4">
-        {/* Checkbox */}
         <input
           type="checkbox"
           checked={task.is_completed}
@@ -293,7 +281,6 @@ const TaskCard = ({
         />
 
         <div className="flex-1 min-w-0">
-          {/* Date */}
           {showDate && task.due_date && (
             <div className="flex items-center gap-2 mb-2">
               <Calendar className="w-4 h-4 text-slate-400" />
@@ -310,7 +297,6 @@ const TaskCard = ({
             </div>
           )}
 
-          {/* Task Title */}
           <h3
             className={`font-semibold text-slate-800 mb-2 ${
               task.is_completed ? 'line-through text-slate-400' : ''
@@ -319,7 +305,6 @@ const TaskCard = ({
             {task.title}
           </h3>
 
-          {/* Node Info */}
           <div className="flex items-center gap-2 flex-wrap">
             <button
               onClick={() => onNodeClick && onNodeClick(task.node_id)}

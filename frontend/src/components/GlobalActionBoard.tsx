@@ -71,14 +71,12 @@ const GlobalActionBoard = ({
         is_completed: isCompleted,
       })
 
-      // Optimistic update
       setTasks((prev) =>
         prev.map((task) =>
           task.id === taskId ? { ...task, is_completed: isCompleted } : task
         )
       )
 
-      // Przelicz statystyki
       const newCompleted = tasks.filter(t => 
         t.id === taskId ? isCompleted : t.is_completed
       ).length
@@ -105,7 +103,6 @@ const GlobalActionBoard = ({
         due_date: dueDate || null,
       })
 
-      // Optimistic update
       setTasks((prev) =>
         prev.map((task) =>
           task.id === taskId ? { ...task, due_date: dueDate } : task
@@ -127,15 +124,12 @@ const GlobalActionBoard = ({
 
   return (
     <>
-      {/* Backdrop */}
       <div
         className="fixed inset-0 bg-black/20 backdrop-blur-sm z-40 transition-opacity"
         onClick={onClose}
       />
 
-      {/* Slide-over Panel */}
       <div className="fixed inset-y-0 right-0 w-[500px] bg-white shadow-2xl z-50 flex flex-col border-l border-slate-200">
-        {/* Header */}
         <div className="bg-gradient-to-r from-indigo-600 to-purple-600 text-white p-6 flex justify-between items-center border-b border-indigo-700/30">
           <div>
             <h2 className="text-xl font-bold flex items-center gap-2">
@@ -155,7 +149,6 @@ const GlobalActionBoard = ({
           </button>
         </div>
 
-        {/* Progress Bar */}
         <div className="bg-gradient-to-br from-slate-50 to-slate-100 p-6 border-b border-slate-200">
           <div className="flex items-center justify-between mb-3">
             <div className="flex items-center gap-2">
@@ -184,7 +177,6 @@ const GlobalActionBoard = ({
           </div>
         </div>
 
-        {/* Content */}
         <div className="flex-1 overflow-y-auto p-6">
           {loading ? (
             <div className="flex items-center justify-center py-12">
@@ -206,7 +198,6 @@ const GlobalActionBoard = ({
             </div>
           ) : (
             <div className="space-y-6">
-              {/* Pending Tasks */}
               {pendingTasks.length > 0 && (
                 <section>
                   <h3 className="text-sm font-semibold text-slate-700 uppercase tracking-wide mb-3 flex items-center gap-2">
@@ -226,7 +217,6 @@ const GlobalActionBoard = ({
                 </section>
               )}
 
-              {/* Completed Tasks */}
               {completedTasks.length > 0 && (
                 <section>
                   <h3 className="text-sm font-semibold text-slate-700 uppercase tracking-wide mb-3 flex items-center gap-2">

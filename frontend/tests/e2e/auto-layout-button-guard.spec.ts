@@ -3,11 +3,9 @@ import { waitForLayoutReady, getAutoLayoutButton, getLayoutControls, seedTestPro
 
 const API_URL = 'http://localhost:8000'
 
-// Test data - will be populated by beforeEach
 let testProjectId: number
 
 test.describe('Auto-Layout Button Guard Tests - CRITICAL UI ELEMENTS', () => {
-  // Seed fresh test data before each test
   test.beforeEach(async ({ request }) => {
     const data = await seedTestProject(request)
     testProjectId = data.id
@@ -16,13 +14,10 @@ test.describe('Auto-Layout Button Guard Tests - CRITICAL UI ELEMENTS', () => {
   test('CRITICAL: Auto-Layout button MUST be visible and clickable', async ({ page }) => {
     console.log('🛡️ GUARD TEST: Checking Auto-Layout button visibility and functionality')
     
-    // Navigate to project view
     await page.goto(`/project/${testProjectId}`)
     
-    // Wait for React Flow to render
     await page.waitForTimeout(5000)
     
-    // Wait for layout ready signal
     await page.waitForFunction(() => {
       const wrapper = document.getElementById('react-flow-wrapper')
       return wrapper?.getAttribute('data-layout-ready') === 'true'
@@ -30,18 +25,14 @@ test.describe('Auto-Layout Button Guard Tests - CRITICAL UI ELEMENTS', () => {
     
     console.log('🔍 Checking for Auto-Layout button...')
     
-    // CRITICAL CHECK 1: Auto-Layout button must exist and be visible
     const autoLayoutButton = getAutoLayoutButton(page)
     
-    // Assert button exists
     await expect(autoLayoutButton).toBeVisible({ timeout: 5000 })
     console.log('✅ Auto-Layout button is visible')
     
-    // Assert button is enabled
     await expect(autoLayoutButton).toBeEnabled()
     console.log('✅ Auto-Layout button is enabled')
     
-    // CRITICAL CHECK 2: Button must be in the correct position (right side)
     const buttonBounds = await autoLayoutButton.boundingBox()
     expect(buttonBounds).toBeTruthy()
     
@@ -49,32 +40,26 @@ test.describe('Auto-Layout Button Guard Tests - CRITICAL UI ELEMENTS', () => {
     expect(viewportSize).toBeTruthy()
     
     if (buttonBounds && viewportSize) {
-      // Button should be on the right side of the screen (last 20% of width)
       const rightSideThreshold = viewportSize.width * 0.8
       expect(buttonBounds.x).toBeGreaterThan(rightSideThreshold)
       console.log(`✅ Auto-Layout button is positioned correctly on right side (x=${Math.round(buttonBounds.x)})`)
       
-      // Button should be within viewport
       expect(buttonBounds.x + buttonBounds.width).toBeLessThanOrEqual(viewportSize.width)
       expect(buttonBounds.y + buttonBounds.height).toBeLessThanOrEqual(viewportSize.height)
       console.log('✅ Auto-Layout button is within viewport bounds')
     }
     
-    // CRITICAL CHECK 3: Button must have correct title/tooltip
     const buttonTitle = await autoLayoutButton.getAttribute('title')
     expect(buttonTitle).toContain('Auto-layout')
     console.log(`✅ Auto-Layout button has correct title: "${buttonTitle}"`)
     
-    // CRITICAL CHECK 4: Button must be clickable and functional
     console.log('🎛️ Testing Auto-Layout button click functionality...')
     
-    // Get initial node positions
     const nodes = page.getByTestId('decision-node')
     const nodeCount = await nodes.count()
     console.log(`📊 Found ${nodeCount} nodes before Auto-Layout`)
     
     if (nodeCount > 0) {
-      // Record initial positions
       const initialPositions = []
       for (let i = 0; i < nodeCount; i++) {
         try {
@@ -91,17 +76,13 @@ test.describe('Auto-Layout Button Guard Tests - CRITICAL UI ELEMENTS', () => {
         }
       }
       
-      // Click Auto-Layout button
       await autoLayoutButton.click()
       console.log('✅ Auto-Layout button clicked successfully')
       
-      // Wait for layout to complete
       await page.waitForTimeout(3000)
       
-      // Verify some effect occurred (nodes moved or layout changed)
       let layoutChanged = false
       
-      // Check if nodes moved
       for (let i = 0; i < Math.min(nodeCount, initialPositions.length); i++) {
         try {
           const node = nodes.nth(i)
@@ -116,14 +97,12 @@ test.describe('Auto-Layout Button Guard Tests - CRITICAL UI ELEMENTS', () => {
             }
           }
         } catch (error) {
-          // Node might be hidden/collapsed, which is also a valid layout change
           layoutChanged = true
           console.log(`✅ Node ${i} state changed (possibly collapsed)`)
           break
         }
       }
       
-      // Layout should have some effect
       if (!layoutChanged) {
         console.log('⚠️ WARNING: Auto-Layout clicked but no visible changes detected')
         console.log('This could be normal if nodes are already optimally positioned')
@@ -140,19 +119,15 @@ test.describe('Auto-Layout Button Guard Tests - CRITICAL UI ELEMENTS', () => {
   test('CRITICAL: All layout control buttons must be present', async ({ page }) => {
     console.log('🛡️ GUARD TEST: Checking all layout control buttons')
     
-    // Navigate to project view
     await page.goto(`/project/${testProjectId}`)
     
-    // Wait for React Flow to render
     await page.waitForTimeout(5000)
     
-    // Wait for layout ready signal
     await page.waitForFunction(() => {
       const wrapper = document.getElementById('react-flow-wrapper')
       return wrapper?.getAttribute('data-layout-ready') === 'true'
     }, { timeout: 15000 })
     
-    // CRITICAL: All essential layout buttons must be present
     const essentialButtons = [
       { 
         name: 'Auto-Layout', 
@@ -176,21 +151,17 @@ test.describe('Auto-Layout Button Guard Tests - CRITICAL UI ELEMENTS', () => {
       
       const buttonElement = page.locator(button.selector).first()
       
-      // Button must be visible
       await expect(buttonElement).toBeVisible({ timeout: 5000 })
       console.log(`✅ ${button.name} button is visible`)
       
-      // Button must be enabled
       await expect(buttonElement).toBeEnabled()
       console.log(`✅ ${button.name} button is enabled`)
       
-      // Button must be clickable (test click without side effects)
       const isClickable = await buttonElement.isEnabled()
       expect(isClickable).toBe(true)
       console.log(`✅ ${button.name} button is clickable`)
     }
     
-    // CRITICAL: Right controls container must be properly positioned - use helper
     const rightControls = getLayoutControls(page)
     await expect(rightControls).toBeVisible()
     
@@ -198,10 +169,8 @@ test.describe('Auto-Layout Button Guard Tests - CRITICAL UI ELEMENTS', () => {
     const viewportSize = page.viewportSize()
     
     if (controlsBounds && viewportSize) {
-      // Controls should be on the right side
       expect(controlsBounds.x).toBeGreaterThan(viewportSize.width * 0.7)
       
-      // Controls should be within viewport
       expect(controlsBounds.x + controlsBounds.width).toBeLessThanOrEqual(viewportSize.width)
       expect(controlsBounds.y + controlsBounds.height).toBeLessThanOrEqual(viewportSize.height)
       
@@ -226,13 +195,11 @@ test.describe('Auto-Layout Button Guard Tests - CRITICAL UI ELEMENTS', () => {
       await page.goto(`/project/${testProjectId}`)
       await page.waitForTimeout(5000)
       
-      // Wait for layout ready signal
       await page.waitForFunction(() => {
         const wrapper = document.getElementById('react-flow-wrapper')
         return wrapper?.getAttribute('data-layout-ready') === 'true'
       }, { timeout: 15000 })
       
-      // Auto-Layout button must be visible at this viewport size
       const autoLayoutButton = getAutoLayoutButton(page)
       
       await expect(autoLayoutButton).toBeVisible({ timeout: 10000 })
@@ -241,7 +208,6 @@ test.describe('Auto-Layout Button Guard Tests - CRITICAL UI ELEMENTS', () => {
       await expect(autoLayoutButton).toBeEnabled()
       console.log(`✅ ${viewport.name}: Auto-Layout button is enabled`)
       
-      // Button must be within viewport bounds
       const buttonBounds = await autoLayoutButton.boundingBox()
       if (buttonBounds) {
         const inViewport = buttonBounds.x >= 0 && 
@@ -253,7 +219,6 @@ test.describe('Auto-Layout Button Guard Tests - CRITICAL UI ELEMENTS', () => {
         console.log(`✅ ${viewport.name}: Auto-Layout button is within viewport bounds`)
       }
       
-      // Test click functionality
       await autoLayoutButton.click()
       await page.waitForTimeout(1000)
       console.log(`✅ ${viewport.name}: Auto-Layout button click works`)
@@ -265,13 +230,10 @@ test.describe('Auto-Layout Button Guard Tests - CRITICAL UI ELEMENTS', () => {
   test('CRITICAL: Auto-Layout button must not be covered by other UI elements', async ({ page }) => {
     console.log('🛡️ GUARD TEST: Checking Auto-Layout button is not covered by other UI')
     
-    // Navigate to project view
     await page.goto(`/project/${testProjectId}`)
     
-    // Wait for React Flow to render
     await page.waitForTimeout(5000)
     
-    // Wait for layout ready signal
     await page.waitForFunction(() => {
       const wrapper = document.getElementById('react-flow-wrapper')
       return wrapper?.getAttribute('data-layout-ready') === 'true'
@@ -284,17 +246,14 @@ test.describe('Auto-Layout Button Guard Tests - CRITICAL UI ELEMENTS', () => {
     expect(buttonBounds).toBeTruthy()
     
     if (buttonBounds) {
-      // Check if button center point is clickable (not covered)
       const centerX = buttonBounds.x + buttonBounds.width / 2
       const centerY = buttonBounds.y + buttonBounds.height / 2
       
-      // The element at the button center should be related to the button
       const isButtonAccessible = await page.evaluate(
         ({ x, y }) => {
           const element = document.elementFromPoint(x, y)
           if (!element) return false
           
-          // Check if element is the button or inside the button
           const button = element.closest('button[title*="Auto-layout"]')
           return button !== null
         },
@@ -304,7 +263,6 @@ test.describe('Auto-Layout Button Guard Tests - CRITICAL UI ELEMENTS', () => {
       expect(isButtonAccessible).toBe(true)
       console.log('✅ Auto-Layout button is not covered by other UI elements')
       
-      // Additional check: button should be clickable at its center
       try {
         await page.mouse.click(centerX, centerY)
         await page.waitForTimeout(1000)
@@ -318,18 +276,14 @@ test.describe('Auto-Layout Button Guard Tests - CRITICAL UI ELEMENTS', () => {
   })
 })
 
-// Additional test for real project/3 specifically
 test.describe('Real Project/3 Auto-Layout Guard', () => {
   test('CRITICAL: Auto-Layout button must work in project/3', async ({ page }) => {
     console.log('🛡️ GUARD TEST: Checking Auto-Layout button in real project/3')
     
-    // Navigate to the specific project the user mentioned
     await page.goto('/project/3')
     
-    // Wait for React Flow to render
     await page.waitForTimeout(5000)
     
-    // Check if project loads without errors
     const errorElement = page.getByTestId('error-state')
     const hasError = await errorElement.isVisible()
     
@@ -340,7 +294,6 @@ test.describe('Real Project/3 Auto-Layout Guard', () => {
     
     console.log('✅ Project/3 loaded without errors')
     
-    // CRITICAL: Auto-Layout button must be visible in project/3
     const autoLayoutButton = page.getByTestId('auto-layout-button')
     
     await expect(autoLayoutButton).toBeVisible({ timeout: 10000 })
@@ -349,12 +302,10 @@ test.describe('Real Project/3 Auto-Layout Guard', () => {
     await expect(autoLayoutButton).toBeEnabled()
     console.log('✅ Auto-Layout button is enabled in project/3')
     
-    // Test click functionality
     await autoLayoutButton.click()
     await page.waitForTimeout(2000)
     console.log('✅ Auto-Layout button click works in project/3')
     
-    // Check if there are nodes in the project
     const nodes = page.getByTestId('decision-node')
     const nodeCount = await nodes.count()
     console.log(`📊 Project/3 has ${nodeCount} nodes`)

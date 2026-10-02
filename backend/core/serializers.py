@@ -59,7 +59,6 @@ class DecisionNodeSerializer(serializers.ModelSerializer):
         return obj.votes.count()
     
     def get_path_cost(self, obj):
-        # P1 FIX: Kalkulacja path_cost na backendzie
         total = 0
         current = obj
         while current:
@@ -69,7 +68,6 @@ class DecisionNodeSerializer(serializers.ModelSerializer):
     
     def get_comment_count(self, obj):
         return obj.comments.count()
-
 
 
 class ProjectSerializer(serializers.ModelSerializer):
@@ -107,32 +105,26 @@ class DecisionNodeCreateSerializer(serializers.ModelSerializer):
         ]
     
     def validate(self, data):
-        # P1 FIX: Walidacja budżetu na backendzie
         parent = data.get('parent')
         cost = float(data.get('estimated_cost', 0))
         project = data.get('project')
         
-        # Jeśli edytujemy istniejący węzeł
         if self.instance:
             project = project or self.instance.project
             parent = parent if 'parent' in data else self.instance.parent
         
-        # Oblicz koszt ścieżki
         path_cost = cost
         current = parent
         while current:
             path_cost += float(current.estimated_cost)
             current = current.parent
         
-        # Sprawdź czy przekracza budżet
         if project and path_cost > float(project.budget_total):
             raise serializers.ValidationError(
                 f"Path cost ${path_cost:.2f} exceeds project budget ${project.budget_total}"
             )
         
         return data
-
-
 
 
 class ChatMessageSerializer(serializers.ModelSerializer):

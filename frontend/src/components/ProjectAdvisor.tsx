@@ -49,7 +49,6 @@ const ProjectAdvisor = ({ projectId, isOpen, onClose, onSuggestionsApplied }: Pr
       const response = await axios.get(`${API_URL}/api/projects/${projectId}/analyze_project/`)
       setAnalysis(response.data)
       
-      // Automatycznie pobierz suggestions
       await handleGetSuggestions()
     } catch (err: any) {
       const errorMessage =
@@ -69,7 +68,6 @@ const ProjectAdvisor = ({ projectId, isOpen, onClose, onSuggestionsApplied }: Pr
       setSuggestions(response.data)
     } catch (err: any) {
       console.error('Failed to get suggestions:', err)
-      // Nie pokazuj błędu - suggestions są opcjonalne
     } finally {
       setLoadingSuggestions(false)
     }
@@ -78,22 +76,18 @@ const ProjectAdvisor = ({ projectId, isOpen, onClose, onSuggestionsApplied }: Pr
   const handleApplySuggestion = async (suggestion: Suggestion, index: number) => {
     setApplyingIndex(index)
     try {
-      // Wyślij do backendu
       const response = await axios.post(
         `${API_URL}/api/projects/${projectId}/apply_suggestion/`,
         { suggestion }
       )
       
       if (response.data.success) {
-        // Usuń zastosowaną sugestię z listy
         setSuggestions(prev => prev.filter((_, i) => i !== index))
         
-        // Notify parent to refresh tree
         if (onSuggestionsApplied) {
           onSuggestionsApplied()
         }
         
-        // Pokaż sukces (opcjonalnie - możesz dodać toast notification)
       }
     } catch (err: any) {
       console.error('Failed to apply suggestion:', err)
@@ -123,9 +117,7 @@ const ProjectAdvisor = ({ projectId, isOpen, onClose, onSuggestionsApplied }: Pr
           onClick={(e) => e.stopPropagation()}
           className="bg-white rounded-2xl shadow-2xl max-w-4xl w-full max-h-[90vh] overflow-hidden"
         >
-          {/* Header */}
           <div className="bg-gradient-to-r from-purple-600 via-indigo-600 to-purple-700 text-white p-6 relative overflow-hidden">
-            {/* Animated Background */}
             <div className="absolute inset-0 opacity-20">
               <motion.div
                 animate={{
@@ -174,7 +166,6 @@ const ProjectAdvisor = ({ projectId, isOpen, onClose, onSuggestionsApplied }: Pr
             </div>
           </div>
 
-          {/* Content */}
           <div className="p-6 overflow-y-auto max-h-[calc(90vh-120px)]">
             {!analysis && !loading && !error && (
               <motion.div
@@ -253,7 +244,6 @@ const ProjectAdvisor = ({ projectId, isOpen, onClose, onSuggestionsApplied }: Pr
                 animate={{ opacity: 1 }}
                 className="space-y-6"
               >
-                {/* Summary */}
                 <motion.div
                   initial={{ opacity: 0, y: 20 }}
                   animate={{ opacity: 1, y: 0 }}
@@ -267,7 +257,6 @@ const ProjectAdvisor = ({ projectId, isOpen, onClose, onSuggestionsApplied }: Pr
                   <p className="text-slate-700 leading-relaxed">{analysis.summary}</p>
                 </motion.div>
 
-                {/* Risks */}
                 <motion.div
                   initial={{ opacity: 0, y: 20 }}
                   animate={{ opacity: 1, y: 0 }}
@@ -296,7 +285,6 @@ const ProjectAdvisor = ({ projectId, isOpen, onClose, onSuggestionsApplied }: Pr
                   </ul>
                 </motion.div>
 
-                {/* Missing Items */}
                 <motion.div
                   initial={{ opacity: 0, y: 20 }}
                   animate={{ opacity: 1, y: 0 }}
@@ -325,7 +313,6 @@ const ProjectAdvisor = ({ projectId, isOpen, onClose, onSuggestionsApplied }: Pr
                   </ul>
                 </motion.div>
 
-                {/* Recommendations */}
                 <motion.div
                   initial={{ opacity: 0, y: 20 }}
                   animate={{ opacity: 1, y: 0 }}
@@ -356,7 +343,6 @@ const ProjectAdvisor = ({ projectId, isOpen, onClose, onSuggestionsApplied }: Pr
                   </ul>
                 </motion.div>
 
-                {/* Actionable Suggestions */}
                 {suggestions.length > 0 && (
                   <motion.div
                     initial={{ opacity: 0, y: 20 }}
@@ -441,7 +427,6 @@ const ProjectAdvisor = ({ projectId, isOpen, onClose, onSuggestionsApplied }: Pr
                   </motion.div>
                 )}
 
-                {/* Action Buttons */}
                 <motion.div
                   initial={{ opacity: 0, y: 20 }}
                   animate={{ opacity: 1, y: 0 }}

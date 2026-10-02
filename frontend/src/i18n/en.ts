@@ -1,5 +1,4 @@
 export const en = {
-  // Common
   common: {
     loading: 'Loading...',
     error: 'Error',
@@ -21,7 +20,6 @@ export const en = {
     closeSidebar: 'Close sidebar',
   },
 
-  // Navigation
   nav: {
     dashboard: 'Dashboard',
     projects: 'Projects',
@@ -29,7 +27,6 @@ export const en = {
     help: 'Help',
   },
 
-  // Project Dashboard
   dashboard: {
     title: 'My Projects',
     createNew: 'Create New Project',
@@ -40,7 +37,6 @@ export const en = {
     lastModified: 'Last modified',
   },
 
-  // New Project Modal
   newProject: {
     title: 'Create New Project',
     projectTitle: 'Project Title',
@@ -80,7 +76,6 @@ export const en = {
     failedToCreate: 'Failed to create project',
   },
 
-  // Tree Visualizer
   tree: {
     autoLayout: 'Auto-layout',
     centerView: 'Center',
@@ -110,7 +105,6 @@ export const en = {
     scenarios: 'Scenarios',
   },
 
-  // Node Sidebar
   node: {
     editNode: 'Edit Node',
     nodeDetails: 'Node Details',
@@ -178,7 +172,6 @@ export const en = {
     failedToDeleteNode: 'Failed to delete node',
   },
 
-  // Custom Node
   customNode: {
     showRadar: 'Show Radar',
     showBars: 'Show Bars',
@@ -187,7 +180,6 @@ export const en = {
     expand: 'Expand',
   },
 
-  // AI Strategic Advisor
   advisor: {
     title: 'AI Strategic Advisor',
     poweredBy: 'Powered by Gemini AI',
@@ -214,7 +206,6 @@ export const en = {
     generatingSuggestions: 'Generating suggestions...',
   },
 
-  // Public View
   public: {
     sharedProject: 'Shared Project',
     viewOnly: 'View Only',
@@ -228,7 +219,6 @@ export const en = {
     communityVotes: 'Community Votes',
   },
 
-  // Errors
   errors: {
     failedToLoad: 'Failed to load',
     failedToSave: 'Failed to save',
@@ -236,7 +226,6 @@ export const en = {
     tryAgain: 'Please try again',
   },
 
-  // AI Chat
   aiChat: {
     title: 'AI Assistant',
     placeholder: 'Ask AI about your project...',
@@ -252,7 +241,6 @@ export const en = {
     failedToGetResponse: 'Failed to get AI response. Please try again.',
   },
 
-  // Action Plan
   actionPlan: {
     title: 'Action Plan',
     generateSteps: 'Generate Steps (AI)',
@@ -266,7 +254,6 @@ export const en = {
     failedToDeleteTask: 'Failed to delete task',
   },
 
-  // Comments
   comments: {
     title: 'Comments',
     detailsTab: 'Details',
@@ -281,7 +268,6 @@ export const en = {
     failedToDeleteComment: 'Failed to delete comment',
   },
 
-  // Global Action Board
   globalActionBoard: {
     title: 'All Tasks',
     subtitle: 'Project task center',
@@ -298,7 +284,6 @@ export const en = {
     failedToUpdateTask: 'Failed to update task',
   },
 
-  // Project Timeline
   timeline: {
     title: 'Project Timeline',
     subtitle: 'Chronological view of all tasks',
@@ -315,7 +300,6 @@ export const en = {
     locale: 'en-US',
   },
 
-  // Project Analytics
   analytics: {
     title: 'Project Analytics',
     subtitle: 'Financial statistics, task progress, and decision scores',
@@ -338,7 +322,6 @@ export const en = {
     pending: 'Pending',
   },
 
-  // Sections
   sections: {
     transport: 'Transport',
     accommodation: 'Accommodation',
@@ -351,7 +334,6 @@ export const en = {
     general: 'General',
   },
 
-  // Floating Dashboard
   floatingDashboard: {
     summary: 'Summary',
     cost: 'Cost',
@@ -361,7 +343,6 @@ export const en = {
     risk: 'Risk',
   },
 
-  // PDF Export
   pdf: {
     nodesSummary: 'Nodes Summary',
     budgetSummary: 'Budget Summary',

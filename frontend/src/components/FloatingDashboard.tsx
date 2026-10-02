@@ -36,7 +36,6 @@ const FloatingDashboard = ({ selectedNodes, totalBudget }: FloatingDashboardProp
       exit={{ opacity: 0, x: 20 }}
       className="fixed md:top-[45%] md:-translate-y-1/2 md:right-6 bottom-0 left-0 right-0 md:left-auto md:bottom-auto bg-slate-900/95 backdrop-blur-xl border-t md:border border-white/20 md:rounded-2xl shadow-2xl z-40 md:max-w-xs"
     >
-      {/* Header - Always Visible */}
       <div 
         className="flex items-center justify-between p-3 md:p-4 cursor-pointer hover:bg-white/5 transition-colors md:rounded-t-2xl"
         onClick={() => setIsExpanded(!isExpanded)}
@@ -52,7 +51,6 @@ const FloatingDashboard = ({ selectedNodes, totalBudget }: FloatingDashboardProp
         </button>
       </div>
 
-      {/* Collapsed Summary - Quick Stats */}
       {!isExpanded && (
         <motion.div
           initial={{ opacity: 0, width: 0 }}
@@ -72,7 +70,6 @@ const FloatingDashboard = ({ selectedNodes, totalBudget }: FloatingDashboardProp
         </motion.div>
       )}
 
-      {/* Expanded Content */}
       <AnimatePresence>
         {isExpanded && (
           <motion.div
@@ -83,7 +80,6 @@ const FloatingDashboard = ({ selectedNodes, totalBudget }: FloatingDashboardProp
             className="overflow-hidden"
           >
             <div className="p-4 pt-0 space-y-4 border-t border-white/10">
-              {/* Budget */}
               <div className="space-y-2 pt-4">
                 <div className="flex items-center justify-between text-sm">
                   <span className="text-slate-300 flex items-center gap-2">
@@ -112,7 +108,6 @@ const FloatingDashboard = ({ selectedNodes, totalBudget }: FloatingDashboardProp
                 </div>
               </div>
 
-              {/* Metrics */}
               <div className="grid grid-cols-2 gap-3">
                 <div className="bg-slate-800/50 rounded-lg p-3">
                   <div className="text-xs text-slate-400 mb-1 flex items-center gap-1">
@@ -127,7 +122,6 @@ const FloatingDashboard = ({ selectedNodes, totalBudget }: FloatingDashboardProp
                 </div>
               </div>
 
-              {/* Selected Items */}
               <div className="max-h-32 overflow-y-auto space-y-2">
                 {selectedNodes.map((node) => (
                   <div key={node.nodeId} className="text-xs bg-slate-800/30 rounded p-2 border border-slate-700/50">

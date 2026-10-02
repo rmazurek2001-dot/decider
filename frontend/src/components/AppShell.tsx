@@ -23,14 +23,12 @@ const AppShell = ({ children }: AppShellProps) => {
 
   return (
     <div className="flex h-screen bg-gradient-to-br from-slate-50 to-slate-100">
-      {/* Sidebar */}
       <motion.aside
         initial={{ x: -80, opacity: 0 }}
         animate={{ x: 0, opacity: 1 }}
         transition={{ duration: 0.3 }}
         className="w-20 bg-slate-900 border-r border-slate-800 flex flex-col items-center py-6 shadow-xl"
       >
-        {/* Logo */}
         <motion.div
           whileHover={{ scale: 1.1 }}
           whileTap={{ scale: 0.95 }}
@@ -40,7 +38,6 @@ const AppShell = ({ children }: AppShellProps) => {
           <span className="text-white font-bold text-lg">AI</span>
         </motion.div>
 
-        {/* Navigation Items */}
         <nav className="flex-1 flex flex-col gap-4">
           {navItems.map((item) => {
             const Icon = item.icon
@@ -61,12 +58,10 @@ const AppShell = ({ children }: AppShellProps) => {
               >
                 <Icon className="w-6 h-6" />
 
-                {/* Tooltip */}
                 <div className="absolute left-16 bg-slate-800 text-white text-xs font-medium px-3 py-1.5 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none whitespace-nowrap">
                   {item.label}
                 </div>
 
-                {/* Active Indicator */}
                 {active && (
                   <motion.div
                     layoutId="activeIndicator"
@@ -79,7 +74,6 @@ const AppShell = ({ children }: AppShellProps) => {
           })}
         </nav>
 
-        {/* Logout Button */}
         <motion.button
           whileHover={{ scale: 1.1 }}
           whileTap={{ scale: 0.95 }}
@@ -93,9 +87,7 @@ const AppShell = ({ children }: AppShellProps) => {
         </motion.button>
       </motion.aside>
 
-      {/* Main Content */}
       <main className="flex-1 overflow-auto relative">
-        {/* Language Switcher - Moved down to avoid overlap with action bar */}
         <div className="absolute top-20 right-6 z-50">
           <LanguageSwitcher />
         </div>

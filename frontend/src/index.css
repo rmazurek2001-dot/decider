@@ -43,7 +43,6 @@ body {
   }
 }
 
-/* Smooth scrollbar styling */
 ::-webkit-scrollbar {
   width: 8px;
   height: 8px;
@@ -62,32 +61,23 @@ body {
   background: rgba(100, 116, 139, 0.5);
 }
 
-
-
-/* ✨ ReactFlow Edge Styling - Efekt hover i glow */
 .react-flow__edge-path {
   transition: stroke-width 0.2s ease, stroke 0.2s ease, filter 0.2s ease;
 }
 
-/* Hover effect dla wszystkich linii */
 .react-flow__edge:hover .react-flow__edge-path {
-  stroke-width: 8 !important; /* Pogrubienie przy hoverze */
-  filter: drop-shadow(0 0 8px currentColor) !important;
+  stroke-width: 8 !important;  filter: drop-shadow(0 0 8px currentColor) !important;
 }
 
-/* Specjalny hover dla linii milestone (zielone) */
 .react-flow__edge:hover .react-flow__edge-path[stroke="#4ade80"] {
-  stroke: #86efac !important; /* Green-300 - jaśniejszy przy hoverze */
-  stroke-width: 20 !important;
+  stroke: #86efac !important;  stroke-width: 20 !important;
   filter: drop-shadow(0 0 12px rgba(74, 222, 128, 0.9)) !important;
 }
 
-/* Glow effect dla linii milestone (zawsze widoczny) */
 .react-flow__edge-path[stroke="#4ade80"] {
   filter: drop-shadow(0 0 6px rgba(74, 222, 128, 0.6));
 }
 
-/* Animacja dla winning path */
 .react-flow__edge.animated .react-flow__edge-path {
   stroke-dasharray: 5;
   animation: dashdraw 0.5s linear infinite;
@@ -99,17 +89,14 @@ body {
   }
 }
 
-/* Strzałki - lepszy kontrast */
 .react-flow__edge .react-flow__edge-textwrapper {
   pointer-events: all;
 }
 
-/* Cursor pointer dla interaktywnych linii */
 .react-flow__edge {
   cursor: pointer;
 }
 
-/* Smooth transitions dla wszystkich elementów ReactFlow */
 .react-flow__node {
   transition: transform 0.2s ease, box-shadow 0.2s ease;
 }

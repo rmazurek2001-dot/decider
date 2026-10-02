@@ -107,7 +107,6 @@ const ProjectAnalytics = ({ projectId }: ProjectAnalyticsProps) => {
 
   if (!data) return null
 
-  // Przygotuj dane dla wykresów
   const budgetChartData = data.budget_by_section.map((item) => ({
     section: t.sections[item.section as keyof typeof t.sections] || item.section,
     [t.analytics.estimated]: item.estimated,
@@ -118,7 +117,7 @@ const ProjectAnalytics = ({ projectId }: ProjectAnalyticsProps) => {
     { subject: t.node.comfort, value: data.scores_average.comfort, fullMark: 100 },
     { subject: t.node.timeEfficiency, value: data.scores_average.time, fullMark: 100 },
     { subject: t.node.pleasure, value: data.scores_average.pleasure, fullMark: 100 },
-    { subject: t.node.risk, value: 100 - data.scores_average.risk, fullMark: 100 }, // Odwrócone ryzyko
+    { subject: t.node.risk, value: 100 - data.scores_average.risk, fullMark: 100 },
   ]
 
   const tasksPieData = [
@@ -137,7 +136,6 @@ const ProjectAnalytics = ({ projectId }: ProjectAnalyticsProps) => {
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 py-12 px-6">
       <div className="max-w-7xl mx-auto">
-        {/* Header */}
         <div className="text-center mb-12">
           <h1 className="text-4xl font-bold text-slate-800 mb-3 flex items-center justify-center gap-3">
             <BarChart3 className="w-10 h-10 text-indigo-600" />
@@ -146,9 +144,7 @@ const ProjectAnalytics = ({ projectId }: ProjectAnalyticsProps) => {
           <p className="text-slate-600">{t.analytics.subtitle}</p>
         </div>
 
-        {/* KPI Cards */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-          {/* Budget Card */}
           <div className="bg-white rounded-xl shadow-lg p-6 border-l-4 border-indigo-500">
             <h3 className="text-sm font-semibold text-slate-600 mb-2">{t.analytics.totalBudget}</h3>
             <div className="space-y-2">
@@ -173,7 +169,6 @@ const ProjectAnalytics = ({ projectId }: ProjectAnalyticsProps) => {
             </div>
           </div>
 
-          {/* Tasks Progress Card */}
           <div className="bg-white rounded-xl shadow-lg p-6 border-l-4 border-emerald-500">
             <h3 className="text-sm font-semibold text-slate-600 mb-2">{t.analytics.tasksProgress}</h3>
             <div className="flex items-center gap-3 mb-3">
@@ -193,7 +188,6 @@ const ProjectAnalytics = ({ projectId }: ProjectAnalyticsProps) => {
             </div>
           </div>
 
-          {/* Decisions Card */}
           <div className="bg-white rounded-xl shadow-lg p-6 border-l-4 border-purple-500">
             <h3 className="text-sm font-semibold text-slate-600 mb-2">{t.analytics.decisionsMade}</h3>
             <p className="text-4xl font-bold text-slate-800 mb-3">{data.decisions_summary.selected}</p>
@@ -213,7 +207,6 @@ const ProjectAnalytics = ({ projectId }: ProjectAnalyticsProps) => {
             </div>
           </div>
 
-          {/* Average Score Card */}
           <div className="bg-white rounded-xl shadow-lg p-6 border-l-4 border-amber-500">
             <h3 className="text-sm font-semibold text-slate-600 mb-2">{t.analytics.avgScore}</h3>
             <p className="text-4xl font-bold text-slate-800 mb-3">
@@ -236,9 +229,7 @@ const ProjectAnalytics = ({ projectId }: ProjectAnalyticsProps) => {
           </div>
         </div>
 
-        {/* Charts Grid */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          {/* Budget by Section Chart */}
           <div className="bg-white rounded-xl shadow-lg p-6">
             <h3 className="text-lg font-bold text-slate-800 mb-4">{t.analytics.budgetBySection}</h3>
             <ResponsiveContainer width="100%" height={300}>
@@ -260,7 +251,6 @@ const ProjectAnalytics = ({ projectId }: ProjectAnalyticsProps) => {
             </ResponsiveContainer>
           </div>
 
-          {/* Decision Profile Radar Chart */}
           <div className="bg-white rounded-xl shadow-lg p-6">
             <h3 className="text-lg font-bold text-slate-800 mb-4">{t.analytics.decisionProfile}</h3>
             <ResponsiveContainer width="100%" height={300}>
@@ -280,7 +270,6 @@ const ProjectAnalytics = ({ projectId }: ProjectAnalyticsProps) => {
             </ResponsiveContainer>
           </div>
 
-          {/* Tasks Status Pie Chart */}
           <div className="bg-white rounded-xl shadow-lg p-6">
             <h3 className="text-lg font-bold text-slate-800 mb-4">{t.analytics.tasksStatus}</h3>
             <ResponsiveContainer width="100%" height={300}>
@@ -304,7 +293,6 @@ const ProjectAnalytics = ({ projectId }: ProjectAnalyticsProps) => {
             </ResponsiveContainer>
           </div>
 
-          {/* Decisions Status Pie Chart */}
           <div className="bg-white rounded-xl shadow-lg p-6">
             <h3 className="text-lg font-bold text-slate-800 mb-4">{t.analytics.decisionsStatus}</h3>
             <ResponsiveContainer width="100%" height={300}>

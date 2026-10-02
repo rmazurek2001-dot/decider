@@ -20,7 +20,6 @@ const LanguageSwitcher = () => {
 
   return (
     <div className="flex items-center gap-2">
-      {/* Language Toggle */}
       <motion.button
         whileHover={{ scale: 1.05 }}
         whileTap={{ scale: 0.95 }}
@@ -32,7 +31,6 @@ const LanguageSwitcher = () => {
         <span className="uppercase font-bold">{language}</span>
       </motion.button>
 
-      {/* Currency Selector */}
       <div className="relative">
         <motion.button
           whileHover={{ scale: 1.05 }}
@@ -49,13 +47,11 @@ const LanguageSwitcher = () => {
         <AnimatePresence>
           {showCurrencyMenu && (
             <>
-              {/* Backdrop */}
               <div
                 className="fixed inset-0 z-40"
                 onClick={() => setShowCurrencyMenu(false)}
               />
               
-              {/* Menu */}
               <motion.div
                 initial={{ opacity: 0, y: -10 }}
                 animate={{ opacity: 1, y: 0 }}

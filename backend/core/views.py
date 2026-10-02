@@ -44,13 +44,10 @@ class ProjectViewSet(viewsets.ModelViewSet):
                 status=status.HTTP_503_SERVICE_UNAVAILABLE
             )
         
-        # Pobierz wszystkie węzły projektu
         all_nodes = DecisionNode.objects.filter(project=project).select_related('parent')
         
-        # Stwórz czytelne summary drzewa
         tree_summary = self._build_tree_summary(project, all_nodes)
         
-        # Wyślij do Gemini
         analysis = ai_service.analyze_project(
             project_title=project.title,
             project_description=project.description,
@@ -59,7 +56,6 @@ class ProjectViewSet(viewsets.ModelViewSet):
         )
         
         if not analysis:
-            # Fallback: zwróć przykładową analizę jeśli AI nie działa
             total_cost = sum(float(node.estimated_cost) for node in all_nodes)
             budget_utilization = (total_cost / float(project.budget_total) * 100) if float(project.budget_total) > 0 else 0
             
@@ -97,13 +93,10 @@ class ProjectViewSet(viewsets.ModelViewSet):
                 status=status.HTTP_503_SERVICE_UNAVAILABLE
             )
         
-        # Pobierz wszystkie węzły projektu
         all_nodes = DecisionNode.objects.filter(project=project).select_related('parent')
         
-        # Stwórz czytelne summary drzewa
         tree_summary = self._build_tree_summary(project, all_nodes)
         
-        # Wyślij do Gemini
         suggestions = ai_service.generate_actionable_suggestions(
             project_title=project.title,
             project_description=project.description,
@@ -112,7 +105,6 @@ class ProjectViewSet(viewsets.ModelViewSet):
         )
         
         if not suggestions:
-            # Fallback: zwróć przykładowe propozycje jeśli AI nie działa
             total_cost = sum(float(node.estimated_cost) for node in all_nodes)
             budget_utilization = (total_cost / float(project.budget_total) * 100) if float(project.budget_total) > 0 else 0
             
@@ -158,17 +150,13 @@ class ProjectViewSet(viewsets.ModelViewSet):
             "Decision Tree Structure:",
         ]
         
-        # Znajdź root nodes
         root_nodes = [node for node in all_nodes if node.parent is None]
         
-        # Rekurencyjnie buduj drzewo
         for root in root_nodes:
             self._add_node_to_summary(root, all_nodes, summary_lines, level=0)
         
-        # Oblicz statystyki
         total_cost = sum(float(node.estimated_cost) for node in all_nodes)
         
-        # Oblicz średnie scores
         avg_comfort = sum(node.score_comfort for node in all_nodes) / all_nodes.count() if all_nodes.count() > 0 else 0
         avg_risk = sum(node.score_risk for node in all_nodes) / all_nodes.count() if all_nodes.count() > 0 else 0
         avg_time = sum(node.score_time for node in all_nodes) / all_nodes.count() if all_nodes.count() > 0 else 0
@@ -203,7 +191,6 @@ class ProjectViewSet(viewsets.ModelViewSet):
         if node.description:
             summary_lines.append(f"{indent}  Description: {node.description}")
         
-        # Znajdź dzieci
         children = [n for n in all_nodes if n.parent_id == node.id]
         for child in children:
             self._add_node_to_summary(child, all_nodes, summary_lines, level + 1)
@@ -226,7 +213,6 @@ class ProjectViewSet(viewsets.ModelViewSet):
         
         try:
             if action_type == 'update_node_status':
-                # Aktualizuj status węzła
                 node_id = suggestion.get('node_id')
                 if not node_id:
                     return Response(
@@ -249,7 +235,6 @@ class ProjectViewSet(viewsets.ModelViewSet):
                 }, status=status.HTTP_200_OK)
             
             elif action_type == 'update_node_scores':
-                # Aktualizuj scores węzła
                 node_id = suggestion.get('node_id')
                 if not node_id:
                     return Response(
@@ -279,7 +264,6 @@ class ProjectViewSet(viewsets.ModelViewSet):
                 }, status=status.HTTP_200_OK)
             
             elif action_type == 'update_node_cost':
-                # Aktualizuj koszt węzła
                 node_id = suggestion.get('node_id')
                 if not node_id:
                     return Response(
@@ -303,11 +287,9 @@ class ProjectViewSet(viewsets.ModelViewSet):
                 }, status=status.HTTP_200_OK)
             
             elif action_type == 'add_buffer_node':
-                # Utwórz nowy węzeł (buffer)
                 parent_id = suggestion.get('parent_id')
                 changes = suggestion.get('changes', {})
                 
-                # Jeśli nie ma parent_id, utwórz jako root node
                 parent = None
                 if parent_id:
                     parent = DecisionNode.objects.get(id=parent_id, project=project)
@@ -361,13 +343,11 @@ class ProjectViewSet(viewsets.ModelViewSet):
         project = self.get_object()
         
         if request.method == 'GET':
-            # Pobierz historię chatu
             messages = ChatMessage.objects.filter(project=project)
             serializer = ChatMessageSerializer(messages, many=True)
             return Response(serializer.data)
         
         elif request.method == 'POST':
-            # Wyślij wiadomość do AI
             user_message = request.data.get('message', '')
             
             if not user_message:
@@ -382,25 +362,21 @@ class ProjectViewSet(viewsets.ModelViewSet):
                     status=status.HTTP_503_SERVICE_UNAVAILABLE
                 )
             
-            # Zapisz wiadomość użytkownika
             ChatMessage.objects.create(
                 project=project,
                 role='user',
                 content=user_message
             )
             
-            # Pobierz kontekst projektu
             all_nodes = DecisionNode.objects.filter(project=project).select_related('parent')
             tree_summary = self._build_tree_summary(project, all_nodes)
             
-            # Pobierz ostatnie 10 wiadomości jako kontekst
             recent_messages = ChatMessage.objects.filter(project=project).order_by('-created_at')[:10]
             chat_history = "\n".join([
                 f"{msg.role.upper()}: {msg.content}"
                 for msg in reversed(recent_messages)
             ])
             
-            # Wyślij do AI
             ai_response = ai_service.chat_with_project(
                 project_title=project.title,
                 project_description=project.description,
@@ -416,7 +392,6 @@ class ProjectViewSet(viewsets.ModelViewSet):
                     status=status.HTTP_500_INTERNAL_SERVER_ERROR
                 )
             
-            # Zapisz odpowiedź AI
             assistant_message = ChatMessage.objects.create(
                 project=project,
                 role='assistant',
@@ -450,7 +425,6 @@ class ProjectViewSet(viewsets.ModelViewSet):
                 status=status.HTTP_503_SERVICE_UNAVAILABLE
             )
         
-        # Wyślij do AI
         project_structure = ai_service.build_project_from_notes(
             notes=notes,
             budget_total=budget_total
@@ -462,14 +436,12 @@ class ProjectViewSet(viewsets.ModelViewSet):
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR
             )
         
-        # Utwórz projekt
         project = Project.objects.create(
             title=project_structure['title'],
             description=project_structure['description'],
             budget_total=budget_total
         )
         
-        # Utwórz węzły rekurencyjnie
         def create_nodes(nodes_data, parent=None, current_order=0):
             for node_data in nodes_data:
                 node = DecisionNode.objects.create(
@@ -487,13 +459,11 @@ class ProjectViewSet(viewsets.ModelViewSet):
                     status='pending'
                 )
                 
-                # Utwórz dzieci
                 if 'children' in node_data and node_data['children']:
                     create_nodes(node_data['children'], parent=node, current_order=current_order)
         
         create_nodes(project_structure['nodes'])
         
-        # Zwróć utworzony projekt
         serializer = ProjectSerializer(project)
         return Response(serializer.data, status=status.HTTP_201_CREATED)
     @action(detail=False, methods=['get'])
@@ -527,7 +497,6 @@ class ProjectViewSet(viewsets.ModelViewSet):
                 status=status.HTTP_400_BAD_REQUEST
             )
 
-        # Pobierz szablon
         template = template_service.get_template(template_id)
         if not template:
             return Response(
@@ -535,7 +504,6 @@ class ProjectViewSet(viewsets.ModelViewSet):
                 status=status.HTTP_404_NOT_FOUND
             )
 
-        # Użyj tytułu z requestu lub domyślnego z szablonu
         project_title = title if title else template['title']
 
         try:
@@ -546,17 +514,14 @@ class ProjectViewSet(viewsets.ModelViewSet):
                 status=status.HTTP_400_BAD_REQUEST
             )
 
-        # Utwórz projekt
         project = Project.objects.create(
             title=project_title,
             description=template['description'],
             budget_total=budget_decimal
         )
 
-        # Utwórz węzły rekurencyjnie z szablonu
         def create_nodes_from_template(nodes_data, parent=None):
             for node_data in nodes_data:
-                # Oblicz koszt na podstawie procentu budżetu
                 cost_percent = node_data.get('estimated_cost_percent', 0)
                 estimated_cost = (budget_decimal * Decimal(str(cost_percent))) / Decimal('100')
 
@@ -576,13 +541,11 @@ class ProjectViewSet(viewsets.ModelViewSet):
                     status='pending'
                 )
 
-                # Utwórz dzieci
                 if 'children' in node_data and node_data['children']:
                     create_nodes_from_template(node_data['children'], parent=node)
 
         create_nodes_from_template(template['nodes'])
 
-        # Zwróć utworzony projekt
         serializer = ProjectSerializer(project)
         return Response(serializer.data, status=status.HTTP_201_CREATED)
 
@@ -594,14 +557,12 @@ class ProjectViewSet(viewsets.ModelViewSet):
         """
         project = self.get_object()
         
-        # Pobierz wszystkie zadania powiązane z projektem poprzez węzły
         tasks = Task.objects.filter(
             node__project=project
         ).select_related('node').order_by('due_date', 'created_at')
         
         serializer = ProjectTaskSerializer(tasks, many=True)
         
-        # Oblicz statystyki
         total_tasks = tasks.count()
         completed_tasks = tasks.filter(is_completed=True).count()
         completion_percentage = (completed_tasks / total_tasks * 100) if total_tasks > 0 else 0
@@ -631,7 +592,6 @@ class ProjectViewSet(viewsets.ModelViewSet):
             status='selected'
         ).exclude(node_type='milestone')
         
-        # 1. Budget Summary (Szacowane vs Rzeczywiste)
         total_estimated = Decimal('0')
         total_actual = Decimal('0')
         
@@ -648,7 +608,6 @@ class ProjectViewSet(viewsets.ModelViewSet):
             'variance_percentage': float((variance / total_estimated * 100) if total_estimated > 0 else 0)
         }
         
-        # 2. Budget by Section (Koszty wg Sekcji)
         budget_by_section = []
         sections = selected_options.values_list('section', flat=True).distinct()
         
@@ -663,7 +622,6 @@ class ProjectViewSet(viewsets.ModelViewSet):
                 'actual': section_actual
             })
         
-        # 3. Scores Average (Średnie oceny)
         scores_avg = selected_options.aggregate(
             comfort=Avg('score_comfort'),
             risk=Avg('score_risk'),
@@ -678,7 +636,6 @@ class ProjectViewSet(viewsets.ModelViewSet):
             'pleasure': round(scores_avg['pleasure'] or 50, 1)
         }
         
-        # 4. Tasks Summary (Podsumowanie zadań)
         all_tasks = Task.objects.filter(node__project=project)
         total_tasks = all_tasks.count()
         completed_tasks = all_tasks.filter(is_completed=True).count()
@@ -690,7 +647,6 @@ class ProjectViewSet(viewsets.ModelViewSet):
             'completion_percentage': round((completed_tasks / total_tasks * 100) if total_tasks > 0 else 0, 1)
         }
         
-        # 5. Decisions Summary (Podsumowanie decyzji)
         all_options = DecisionNode.objects.filter(project=project).exclude(node_type='milestone')
         decisions_summary = {
             'total_options': all_options.count(),
@@ -723,14 +679,11 @@ class ProjectViewSet(viewsets.ModelViewSet):
             )
         
         try:
-            # Pobierz wszystkie węzły projektu
             node_ids = [pos['id'] for pos in positions_data if 'id' in pos]
             nodes = DecisionNode.objects.filter(project=project, id__in=node_ids)
             
-            # Stwórz mapę id -> node
             nodes_map = {node.id: node for node in nodes}
             
-            # Zaktualizuj pozycje
             updated_nodes = []
             for pos_data in positions_data:
                 node_id = pos_data.get('id')
@@ -740,7 +693,6 @@ class ProjectViewSet(viewsets.ModelViewSet):
                     node.position_y = float(pos_data.get('position_y', 0))
                     updated_nodes.append(node)
             
-            # Bulk update dla wydajności
             if updated_nodes:
                 DecisionNode.objects.bulk_update(updated_nodes, ['position_x', 'position_y'])
             
@@ -757,22 +709,16 @@ class ProjectViewSet(viewsets.ModelViewSet):
             )
 
 
-
 class DecisionNodeViewSet(viewsets.ModelViewSet):
     queryset = DecisionNode.objects.select_related('parent', 'project').prefetch_related('tasks', 'comments').all()
     serializer_class = DecisionNodeSerializer
 
     def get_permissions(self):
-        # P0 FIX: Tylko odczyt i głosowanie dla niezalogowanych
         if self.action in ['list', 'retrieve', 'vote', 'generate_subnodes', 'update', 'partial_update', 'create', 'destroy']:
             return [permissions.AllowAny()]
-        # Dla MVP bez auth: wszystkie akcje dozwolone
-        # W produkcji: return [permissions.IsAuthenticated()]
         return [permissions.AllowAny()]
 
     def get_serializer_class(self):
-        # ✅ NAPRAWA v1.27.0: Dla partial_update (PATCH) użyj DecisionNodeSerializer
-        # aby umożliwić zapis position_x i position_y bez walidacji budżetu
         if self.action == 'partial_update':
             return DecisionNodeSerializer
         if self.action == 'create' or self.action == 'update':
@@ -790,7 +736,6 @@ class DecisionNodeViewSet(viewsets.ModelViewSet):
     def generate_subnodes(self, request, pk=None):
         parent_node = self.get_object()
         
-        # P1 FIX: Rate limiting na AI endpoint
         client_ip = self._get_client_ip(request)
         cache_key = f'ai_gen_{pk}_{client_ip}'
         if cache.get(cache_key):
@@ -822,7 +767,6 @@ class DecisionNodeViewSet(viewsets.ModelViewSet):
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR
             )
         
-        # Ustaw rate limit po udanym wywołaniu
         cache.set(cache_key, True, 30)
         
         created_nodes = []
@@ -858,7 +802,6 @@ class DecisionNodeViewSet(viewsets.ModelViewSet):
         node = self.get_object()
         session_id = request.data.get('session_id', None)
         
-        # P0 FIX: Walidacja session_id
         if not session_id:
             return Response(
                 {'error': 'Session ID is required'},
@@ -867,7 +810,6 @@ class DecisionNodeViewSet(viewsets.ModelViewSet):
         
         ip_address = self._get_client_ip(request)
 
-        # Sprawdzenie czy głos już istnieje
         if Vote.objects.filter(node=node, session_id=session_id).exists():
             return Response(
                 {'error': 'You have already voted for this node'},
@@ -893,14 +835,12 @@ class DecisionNodeViewSet(viewsets.ModelViewSet):
         """
         node = self.get_object()
 
-        # Sprawdź czy węzeł jest wybrany
         if node.status != 'selected':
             return Response(
                 {'error': 'Tasks can only be generated for selected nodes'},
                 status=status.HTTP_400_BAD_REQUEST
             )
 
-        # Rate limiting
         client_ip = self._get_client_ip(request)
         cache_key = f'ai_tasks_{pk}_{client_ip}'
         if cache.get(cache_key):
@@ -915,7 +855,6 @@ class DecisionNodeViewSet(viewsets.ModelViewSet):
                 status=status.HTTP_503_SERVICE_UNAVAILABLE
             )
 
-        # Generuj zadania przez AI
         tasks_list = ai_service.generate_tasks_for_node(
             node_title=node.title,
             node_description=node.description or ''
@@ -927,10 +866,8 @@ class DecisionNodeViewSet(viewsets.ModelViewSet):
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR
             )
 
-        # Ustaw rate limit
         cache.set(cache_key, True, 30)
 
-        # Utwórz obiekty Task
         created_tasks = []
         for task_title in tasks_list:
             task = Task.objects.create(
@@ -940,7 +877,6 @@ class DecisionNodeViewSet(viewsets.ModelViewSet):
             )
             created_tasks.append(task)
 
-        # Zwróć zaktualizowany węzeł z zadaniami
         serializer = DecisionNodeSerializer(node)
         return Response({
             'node': serializer.data,
@@ -963,7 +899,7 @@ class TaskViewSet(viewsets.ModelViewSet):
     """
     queryset = Task.objects.select_related('node').all()
     serializer_class = TaskSerializer
-    permission_classes = [permissions.AllowAny]  # MVP bez auth
+    permission_classes = [permissions.AllowAny]
     
     def get_queryset(self):
         queryset = Task.objects.all()
@@ -980,7 +916,7 @@ class CommentViewSet(viewsets.ModelViewSet):
     """
     queryset = Comment.objects.select_related('node').all()
     serializer_class = CommentSerializer
-    permission_classes = [permissions.AllowAny]  # Publiczny dostęp
+    permission_classes = [permissions.AllowAny]
     
     def get_queryset(self):
         queryset = Comment.objects.all()
@@ -1033,14 +969,12 @@ def public_project_tasks_view(request, token):
             status=status.HTTP_404_NOT_FOUND
         )
     
-    # Pobierz wszystkie zadania powiązane z projektem
     tasks = Task.objects.filter(
         node__project=project
     ).select_related('node').order_by('due_date', 'created_at')
     
     serializer = ProjectTaskSerializer(tasks, many=True)
     
-    # Oblicz statystyki
     total_tasks = tasks.count()
     completed_tasks = tasks.filter(is_completed=True).count()
     completion_percentage = (completed_tasks / total_tasks * 100) if total_tasks > 0 else 0
@@ -1056,11 +990,6 @@ def public_project_tasks_view(request, token):
     }, status=status.HTTP_200_OK)
 
 
-
-# ============================================================================
-# TESTING ENDPOINTS - Only available when DEBUG=True
-# ============================================================================
-
 @api_view(['POST'])
 def seed_test_project(request):
     """
@@ -1074,7 +1003,6 @@ def seed_test_project(request):
     """
     from django.conf import settings
     
-    # Security check - only allow in DEBUG mode
     if not settings.DEBUG:
         return Response(
             {'error': 'Testing endpoints are only available in DEBUG mode'},
@@ -1082,14 +1010,12 @@ def seed_test_project(request):
         )
     
     try:
-        # Create test project
         project = Project.objects.create(
             title="E2E Test Project",
             description="Automated test project for Playwright E2E tests",
             budget_total=Decimal('50000.00')
         )
         
-        # Create root milestone node
         root_node = DecisionNode.objects.create(
             project=project,
             title="Test Milestone",
@@ -1104,7 +1030,6 @@ def seed_test_project(request):
             order=1
         )
         
-        # Create child option node
         option_node = DecisionNode.objects.create(
             project=project,
             parent=root_node,
@@ -1120,7 +1045,6 @@ def seed_test_project(request):
             order=2
         )
         
-        # Create second option for testing
         DecisionNode.objects.create(
             project=project,
             parent=root_node,
@@ -1136,21 +1060,18 @@ def seed_test_project(request):
             order=3
         )
         
-        # Create a sample task for testing
         Task.objects.create(
             node=option_node,
             title="Test Task",
             is_completed=False
         )
         
-        # Create a sample comment for testing
         Comment.objects.create(
             node=option_node,
             author_name="Test User",
             content="This is a test comment for E2E testing"
         )
         
-        # Serialize response data
         project_serializer = ProjectSerializer(project)
         nodes = DecisionNode.objects.filter(project=project).order_by('order')
         nodes_serializer = DecisionNodeSerializer(nodes, many=True)

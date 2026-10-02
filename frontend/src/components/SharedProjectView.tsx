@@ -1,7 +1,3 @@
-/**
- * SharedProjectView - Publiczny widok udostępnionego projektu (Read-Only)
- * Używa share_token zamiast ID projektu
- */
 import { useCallback, useEffect, useState, useRef } from 'react'
 import ReactFlow, {
   Node,
@@ -51,7 +47,6 @@ const SharedProjectView = ({ token }: SharedProjectViewProps) => {
   const navigate = useNavigate()
   const { fitView, getNodes } = useReactFlow()
 
-  // Budowanie drzewa React Flow
   const buildTree = useCallback(
     (nodesData: PublicDecisionNode[], projectBudget: number) => {
       const flowNodes: Node[] = []
@@ -90,7 +85,7 @@ const SharedProjectView = ({ token }: SharedProjectViewProps) => {
             comments: nodeData.comments || [],
             comment_count: nodeData.comment_count || 0,
             parent: nodeData.parent,
-            isReadOnly: true, // ✅ KLUCZOWA FLAGA - tryb Read-Only
+            isReadOnly: true,
           },
         }
 
@@ -108,7 +103,6 @@ const SharedProjectView = ({ token }: SharedProjectViewProps) => {
         flowNodes.push(flowNode)
         reactFlowNodeMap.set(nodeData.id, flowNode)
 
-        // Tworzenie krawędzi
         if (nodeData.parent) {
           const parentNode = reactFlowNodeMap.get(nodeData.parent)
 
@@ -215,7 +209,6 @@ const SharedProjectView = ({ token }: SharedProjectViewProps) => {
     []
   )
 
-  // Pobieranie danych projektu
   const fetchData = useCallback(async () => {
     setLoading(true)
     setError(null)
@@ -234,7 +227,6 @@ const SharedProjectView = ({ token }: SharedProjectViewProps) => {
       setNodes(flowNodes)
       setEdges(flowEdges)
 
-      // Centrowanie kamery po załadowaniu
       setTimeout(() => {
         const checkAndFit = () => {
           const currentNodes = getNodes()
@@ -275,7 +267,6 @@ const SharedProjectView = ({ token }: SharedProjectViewProps) => {
       const nodeId = node.data.nodeId
       if (nodeId) {
         setSelectedNodeId(nodeId)
-        // Znajdź pełne dane węzła w treeData
         const findNode = (nodes: PublicDecisionNode[], id: number): PublicDecisionNode | null => {
           for (const n of nodes) {
             if (n.id === id) return n
@@ -331,10 +322,8 @@ const SharedProjectView = ({ token }: SharedProjectViewProps) => {
 
   return (
     <div className="w-full h-screen relative bg-gradient-to-br from-slate-50 to-slate-100">
-      {/* Header z tytułem projektu i CTA */}
       {project && (
         <div className="absolute top-4 md:top-6 left-1/2 -translate-x-1/2 z-20 flex flex-col md:flex-row items-center gap-2 md:gap-4 w-full md:w-auto px-4 md:px-0">
-          {/* Tytuł projektu */}
           <div className="bg-white/95 backdrop-blur-sm shadow-xl rounded-2xl px-4 md:px-6 py-3 md:py-4 border border-indigo-100 w-full md:w-auto">
             <div className="flex items-center gap-2 md:gap-3">
               <div className="w-2 h-2 bg-indigo-500 rounded-full animate-pulse"></div>
@@ -347,7 +336,6 @@ const SharedProjectView = ({ token }: SharedProjectViewProps) => {
             </div>
           </div>
 
-          {/* CTA Button */}
           <button
             onClick={() => navigate('/')}
             className="group bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white px-4 md:px-6 py-3 md:py-4 rounded-2xl shadow-xl transition-all duration-300 hover:shadow-2xl hover:scale-105 flex items-center gap-2 md:gap-3 font-semibold text-sm md:text-base w-full md:w-auto justify-center"
@@ -360,7 +348,6 @@ const SharedProjectView = ({ token }: SharedProjectViewProps) => {
         </div>
       )}
 
-      {/* React Flow */}
       <ReactFlow
         nodes={nodes}
         edges={edges}
@@ -368,11 +355,11 @@ const SharedProjectView = ({ token }: SharedProjectViewProps) => {
         onEdgesChange={onEdgesChange}
         onNodeClick={onNodeClick}
         nodeTypes={nodeTypes}
-        nodesDraggable={false} // ✅ Zablokowane przesuwanie
-        nodesConnectable={false} // ✅ Zablokowane łączenie
-        elementsSelectable={true} // ✅ Można klikać (sidebar)
+        nodesDraggable={false}
+        nodesConnectable={false}
+        elementsSelectable={true}
         fitView
-        fitViewOptions={{ padding: 0.2, maxZoom: 1.5, minZoom: 0.1 }} // ✅ Optymalizacja dla mobile
+        fitViewOptions={{ padding: 0.2, maxZoom: 1.5, minZoom: 0.1 }}
         minZoom={0.05}
         maxZoom={2}
         className="bg-transparent"
@@ -399,7 +386,6 @@ const SharedProjectView = ({ token }: SharedProjectViewProps) => {
         />
       </ReactFlow>
 
-      {/* Floating Dashboard (Read-Only) */}
       {project && (
         <FloatingDashboard
           selectedNodes={treeData
@@ -424,15 +410,14 @@ const SharedProjectView = ({ token }: SharedProjectViewProps) => {
         />
       )}
 
-      {/* Node Sidebar (Read-Only) */}
       <NodeSidebar
         node={selectedNode}
         isOpen={sidebarOpen}
         onClose={handleCloseSidebar}
-        onNodesGenerated={() => {}} // Brak akcji w trybie Read-Only
-        onNodeUpdated={() => {}} // Brak aktualizacji w trybie Read-Only
-        onNodeDeleted={() => {}} // Brak usuwania w trybie Read-Only
-        isReadOnly={true} // ✅ Tryb Read-Only
+        onNodesGenerated={() => {}}
+        onNodeUpdated={() => {}}
+        onNodeDeleted={() => {}}
+        isReadOnly={true}
       />
     </div>
   )

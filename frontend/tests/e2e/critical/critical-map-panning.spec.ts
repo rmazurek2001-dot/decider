@@ -2,7 +2,6 @@ import { test, expect } from '@playwright/test'
 
 const API_URL = 'http://localhost:8000'
 
-// Helper function to seed test data
 async function seedHierarchicalProject(request: any) {
   const response = await request.post(`${API_URL}/api/testing/seed-project/`)
   
@@ -17,16 +16,6 @@ async function seedHierarchicalProject(request: any) {
   return data
 }
 
-/**
- * 🚨 KRYTYCZNY TEST: PRZECIĄGANIE MAPY
- * 
- * Ten test sprawdza czy użytkownik może FIZYCZNIE przeciągać mapę myszką.
- * Używa page.mouse API do symulacji prawdziwych ruchów myszy.
- * 
- * ZAKAZ: force: true, evaluate, click()
- * WYMAGANE: Fizyczne ruchy myszy, sprawdzenie transform w DOM
- */
-
 test.describe('CRITICAL: Map Panning', () => {
   let testProjectId: number
   let testShareToken: string
@@ -40,11 +29,9 @@ test.describe('CRITICAL: Map Panning', () => {
   test('should allow physical map panning with mouse', async ({ page }) => {
     console.log('🚨 KRYTYCZNY TEST: Fizyczne przeciąganie mapy w EDYTORZE')
     
-    // Go to dashboard first
     await page.goto('http://localhost:5173/')
     await page.waitForTimeout(2000)
     
-    // Login if needed
     const emailInput = page.locator('input[type="email"]')
     if (await emailInput.isVisible()) {
       await emailInput.fill('test@example.com')
@@ -55,29 +42,24 @@ test.describe('CRITICAL: Map Panning', () => {
       await page.waitForTimeout(2000)
     }
     
-    // Go to project EDITOR (NOT SharedProjectView!)
     await page.goto(`http://localhost:5173/project/${testProjectId}`)
     await page.waitForTimeout(5000)
     
-    // Wait for React Flow to load
     const reactFlowPane = page.locator('.react-flow__pane')
     await expect(reactFlowPane).toBeVisible({ timeout: 10000 })
     
-    // CRITICAL: Click Auto-Layout to apply new DAGRE spacing
     const autoLayoutButton = page.locator('[data-testid="auto-layout-button"]')
     await expect(autoLayoutButton).toBeVisible()
     console.log('🎛️ Applying Auto-Layout with new DAGRE spacing...')
     await autoLayoutButton.click()
-    await page.waitForTimeout(4000) // Wait for layout to complete
+    await page.waitForTimeout(4000)
     
     const viewport = page.locator('.react-flow__viewport')
     await expect(viewport).toBeVisible()
     
-    // Get initial transform
     const initialTransform = await viewport.getAttribute('style')
     console.log('📍 Initial viewport transform:', initialTransform)
     
-    // Get pane bounding box for mouse positioning
     const paneBox = await reactFlowPane.boundingBox()
     if (!paneBox) {
       throw new Error('❌ Cannot get React Flow pane bounding box')
@@ -85,17 +67,14 @@ test.describe('CRITICAL: Map Panning', () => {
     
     console.log('📐 Pane bounding box:', paneBox)
     
-    // Calculate center of pane
     const centerX = paneBox.x + paneBox.width / 2
     const centerY = paneBox.y + paneBox.height / 2
     
     console.log(`🎯 Starting drag from center: (${centerX}, ${centerY})`)
     
-    // PHYSICAL MOUSE DRAG - NO FORCE, NO SHORTCUTS
     await page.mouse.move(centerX, centerY)
     await page.mouse.down()
     
-    // Drag 200px down and right
     const targetX = centerX + 200
     const targetY = centerY + 200
     
@@ -103,14 +82,11 @@ test.describe('CRITICAL: Map Panning', () => {
     await page.mouse.move(targetX, targetY, { steps: 10 })
     await page.mouse.up()
     
-    // Wait for transform to update
     await page.waitForTimeout(1000)
     
-    // Get new transform
     const newTransform = await viewport.getAttribute('style')
     console.log('📍 New viewport transform:', newTransform)
     
-    // Debug: Check what element is at center after drag
     const elementAfterDrag = await page.evaluate(([x, y]) => {
       const element = document.elementFromPoint(x, y)
       return {
@@ -121,7 +97,6 @@ test.describe('CRITICAL: Map Panning', () => {
     }, [centerX, centerY])
     console.log('🔍 Element at center after drag:', elementAfterDrag)
     
-    // Debug: Check React Flow state
     const reactFlowState = await page.evaluate(() => {
       const reactFlowElement = document.querySelector('.react-flow')
       return {
@@ -132,10 +107,8 @@ test.describe('CRITICAL: Map Panning', () => {
     })
     console.log('🔍 React Flow state:', reactFlowState)
     
-    // CRITICAL ASSERTION: Transform MUST have changed
     expect(newTransform).not.toBe(initialTransform)
     
-    // Additional check: new transform should contain translate values
     expect(newTransform).toContain('translate')
     
     console.log('✅ KRYTYCZNY TEST PRZESZEDŁ: Mapa reaguje na przeciąganie myszą w EDYTORZE')
@@ -144,11 +117,9 @@ test.describe('CRITICAL: Map Panning', () => {
   test('should detect if pane is blocked by overlay', async ({ page }) => {
     console.log('🚨 KRYTYCZNY TEST: Wykrywanie blokujących nakładek w EDYTORZE')
     
-    // Go to dashboard first
     await page.goto('http://localhost:5173/')
     await page.waitForTimeout(2000)
     
-    // Login if needed
     const emailInput = page.locator('input[type="email"]')
     if (await emailInput.isVisible()) {
       await emailInput.fill('test@example.com')
@@ -159,21 +130,18 @@ test.describe('CRITICAL: Map Panning', () => {
       await page.waitForTimeout(2000)
     }
     
-    // Go to project EDITOR (NOT SharedProjectView!)
     await page.goto(`http://localhost:5173/project/${testProjectId}`)
     await page.waitForTimeout(5000)
     
     const reactFlowPane = page.locator('.react-flow__pane')
     await expect(reactFlowPane).toBeVisible()
     
-    // CRITICAL: Click Auto-Layout to apply new DAGRE spacing
     const autoLayoutButton = page.locator('[data-testid="auto-layout-button"]')
     await expect(autoLayoutButton).toBeVisible()
     console.log('🎛️ Applying Auto-Layout with new DAGRE spacing...')
     await autoLayoutButton.click()
-    await page.waitForTimeout(4000) // Wait for layout to complete
+    await page.waitForTimeout(4000)
     
-    // Check if pane is actually clickable (not covered by overlay)
     const paneBox = await reactFlowPane.boundingBox()
     if (!paneBox) {
       throw new Error('❌ Cannot get pane bounding box')
@@ -182,10 +150,8 @@ test.describe('CRITICAL: Map Panning', () => {
     const centerX = paneBox.x + paneBox.width / 2
     const centerY = paneBox.y + paneBox.height / 2
     
-    // Try to hover over center - should work if not blocked
     await page.mouse.move(centerX, centerY)
     
-    // Check what element is actually at this position
     const elementAtPosition = await page.evaluate(([x, y]) => {
       const element = document.elementFromPoint(x, y)
       return {
@@ -197,7 +163,6 @@ test.describe('CRITICAL: Map Panning', () => {
     
     console.log('🔍 Element at pane center:', elementAtPosition)
     
-    // The element should be part of React Flow (pane or viewport)
     const className = typeof elementAtPosition.className === 'string' 
       ? elementAtPosition.className 
       : elementAtPosition.className?.toString() || ''
@@ -206,7 +171,7 @@ test.describe('CRITICAL: Map Panning', () => {
       className.includes('react-flow') ||
       className.includes('pane') ||
       className.includes('viewport') ||
-      elementAtPosition.tagName === 'path' || // SVG elements in React Flow
+      elementAtPosition.tagName === 'path' ||
       elementAtPosition.tagName === 'svg'
     
     if (!isReactFlowElement) {

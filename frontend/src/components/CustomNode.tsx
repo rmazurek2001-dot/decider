@@ -7,7 +7,6 @@ import {
 } from 'lucide-react'
 import { useLanguage } from '../contexts/LanguageContext'
 
-// ... (Interface CustomNodeData bez zmian) ...
 interface CustomNodeData {
   nodeId: number
   title: string
@@ -38,19 +37,16 @@ interface CustomNodeData {
   onEditNode?: (nodeId: number) => void
   tasks?: Array<{ id: number; title: string; is_completed: boolean }>
   comment_count?: number
-  isReadOnly?: boolean // ✅ DODANO - flaga trybu Read-Only
+  isReadOnly?: boolean
 }
 
-// Helper functions (uproszczone)
 const getNodeIcon = () => <Calendar style={{ width: '100%', height: '100%' }} /> 
 const getStatusColor = (status?: string) => {
-    // Winning path NIE zmienia koloru - tylko dodaje ikonę
     if (status === 'selected') return 'from-emerald-500 to-emerald-600'
     return 'from-indigo-500 to-indigo-600'
 }
 const calculateValueRating = () => ({ rating: 90, label: 'Value', color: 'text-emerald-500' })
 
-// --- MENU KONTEKSTOWE ---
 const NodeContextMenu = ({ data, language }: { data: CustomNodeData; language: string }) => {
   const [isOpen, setIsOpen] = useState(false)
   
@@ -109,8 +105,6 @@ const NodeContextMenu = ({ data, language }: { data: CustomNodeData; language: s
   )
 }
 
-// --- KOMPONENTY RENDERUJĄCE ---
-
 const renderMilestoneNode = (data: CustomNodeData, statusGradient: string, language: string, formatCurrency: (value: string | number) => string) => {
   return (
     <div
@@ -121,15 +115,12 @@ const renderMilestoneNode = (data: CustomNodeData, statusGradient: string, langu
       }}
       className="relative rounded-[120px] border-[12px] border-white/20 shadow-2xl overflow-hidden antialiased"
     >
-      {/* Menu kontekstowe - ukryte w trybie Read-Only */}
       {!data.isReadOnly && <NodeContextMenu data={data} language={language} />}
       
-      {/* Status Bar */}
       <div className={`h-32 bg-gradient-to-r ${statusGradient}`} />
 
       <div className="p-36">
         <div className="flex items-start gap-32 mb-32">
-          {/* Ikona ultra gigantyczna */}
           <div className="w-96 h-96 bg-indigo-600 rounded-[90px] flex items-center justify-center flex-shrink-0 shadow-lg">
             <div className="w-60 h-60 text-white">
               {getNodeIcon()}
@@ -137,14 +128,12 @@ const renderMilestoneNode = (data: CustomNodeData, statusGradient: string, langu
           </div>
           
           <div className="flex-1">
-            {/* Tytuł: 180px */}
             <h3 className="font-bold text-white uppercase leading-tight" style={{ fontSize: '180px' }}>
               {data.title}
             </h3>
           </div>
         </div>
         
-        {/* Panel statystyk */}
         <div className="grid grid-cols-2 gap-24 mt-36">
           <div className="bg-white/5 p-24 rounded-[60px] border-[6px] border-white/10">
             <span className="text-slate-400 font-bold uppercase block mb-10" style={{ fontSize: '60px' }}>{language === 'pl' ? 'BUDŻET' : 'BUDGET'}</span>
@@ -157,7 +146,6 @@ const renderMilestoneNode = (data: CustomNodeData, statusGradient: string, langu
         </div>
       </div>
 
-      {/* Button */}
       {data.hasChildren && (
         <div className="absolute bottom-24 left-36 right-36">
           <button
@@ -207,10 +195,8 @@ const renderOptionNode = (
         'border-slate-700 border-l-slate-600'
       }`}
     >
-        {/* Menu kontekstowe - ukryte w trybie Read-Only */}
         {!data.isReadOnly && <NodeContextMenu data={data} language={language} />}
         
-        {/* Nowoczesna gwiazdka dla winning path */}
         {isWinning && (
           <div className="absolute top-[50px] left-[50px] z-30">
             <div className="relative w-[200px] h-[200px]">
@@ -220,18 +206,14 @@ const renderOptionNode = (
         )}
         
         <div className="p-36 flex flex-col h-full justify-between">
-            {/* Górna sekcja: ikona, tytuł, rating i cena */}
             <div>
                 <div className="flex justify-between items-start gap-24 mb-48">
-                    {/* Lewa strona: ikona + tytuł + rating */}
                     <div className="flex gap-24 flex-1 min-w-0">
-                        {/* IKONA OPCJI */}
                         <div className="w-80 h-80 rounded-[60px] bg-slate-800 text-white flex items-center justify-center flex-shrink-0">
                             <div className="w-48 h-48">{getNodeIcon()}</div>
                         </div>
                         
                         <div className="flex-1 min-w-0">
-                            {/* TYTUŁ OPCJI */}
                             <h3 className="font-bold text-white leading-tight mb-16" style={{ fontSize: '150px' }}>
                                 {data.title}
                             </h3>
@@ -243,7 +225,6 @@ const renderOptionNode = (
                         </div>
                     </div>
                     
-                    {/* Prawa strona: CENA (niżej, żeby nie kolidowała z przyciskiem) */}
                     <div className="text-right pt-[350px]">
                         {data.actual_cost ? (
                           <div>
@@ -272,7 +253,6 @@ const renderOptionNode = (
                     </div>
                 </div>
 
-                {/* Paski - wyżej, więcej miejsca */}
                 <div className="grid grid-cols-2 gap-24">
                     {radarData.map((item: any) => (
                         <div key={item.subject}>
@@ -287,7 +267,6 @@ const renderOptionNode = (
                     ))}
                 </div>
 
-                {/* Wskaźnik zadań - tylko dla wybranych opcji z zadaniami */}
                 {isSelected && data.tasks && data.tasks.length > 0 && (
                   <div className="mt-32 pt-24 border-t border-slate-700">
                     <div className="flex items-center justify-between">
@@ -310,7 +289,6 @@ const renderOptionNode = (
                   </div>
                 )}
 
-                {/* Wskaźnik komentarzy - jeśli są komentarze */}
                 {data.comment_count && data.comment_count > 0 && (
                   <div className="mt-32 pt-24 border-t border-slate-700">
                     <div className="flex items-center gap-16">
@@ -345,7 +323,6 @@ const CustomNode = ({ data }: NodeProps<CustomNodeData>) => {
   if (isMilestone) {
     return (
       <motion.div initial={{ scale: 0.9 }} animate={{ scale: 1 }} className="group relative">
-        {/* Odznaka KROK - MEGA GIGANT */}
         {data.order && (
             <div className="absolute z-20 bg-amber-500 rounded-full border-[10px] border-[#050505] flex items-center justify-center shadow-2xl"
                  style={{ width: '120px', height: '120px', top: '-40px', left: '-40px' }}>
@@ -353,12 +330,10 @@ const CustomNode = ({ data }: NodeProps<CustomNodeData>) => {
             </div>
         )}
         {renderMilestoneNode(data, statusGradient, language, formatCurrency)}
-        {/* ✅ Wszystkie 4 strony - niewidoczne punkty zaczepienia */}
         <Handle type="target" position={Position.Top} id="top" className="w-1 h-1 opacity-0" />
         <Handle type="source" position={Position.Bottom} id="bottom" className="w-1 h-1 opacity-0" />
         <Handle type="target" position={Position.Left} id="left" className="w-1 h-1 opacity-0" />
         <Handle type="source" position={Position.Right} id="right" className="w-1 h-1 opacity-0" />
-        {/* Dodatkowe dla elastyczności */}
         <Handle type="source" position={Position.Left} id="left-source" className="w-1 h-1 opacity-0" />
         <Handle type="target" position={Position.Right} id="right-target" className="w-1 h-1 opacity-0" />
       </motion.div>
@@ -368,12 +343,10 @@ const CustomNode = ({ data }: NodeProps<CustomNodeData>) => {
   return (
     <motion.div initial={{ x: -20, opacity: 0 }} animate={{ x: 0, opacity: 1 }} className="group relative">
         {renderOptionNode(data, cost, data.status==='selected', data.status==='rejected', !!data.isOnWinningPath, valueRating, radarData, formatCurrency, language)}
-        {/* ✅ Wszystkie 4 strony - niewidoczne punkty zaczepienia */}
         <Handle type="target" position={Position.Top} id="top" className="w-1 h-1 opacity-0" />
         <Handle type="source" position={Position.Bottom} id="bottom" className="w-1 h-1 opacity-0" />
         <Handle type="target" position={Position.Left} id="left" className="w-1 h-1 opacity-0" />
         <Handle type="source" position={Position.Right} id="right" className="w-1 h-1 opacity-0" />
-        {/* Dodatkowe dla elastyczności */}
         <Handle type="source" position={Position.Left} id="left-source" className="w-1 h-1 opacity-0" />
         <Handle type="target" position={Position.Right} id="right-target" className="w-1 h-1 opacity-0" />
     </motion.div>

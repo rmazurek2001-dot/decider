@@ -1,7 +1,6 @@
 import { TranslationKeys } from './en'
 
 export const pl: TranslationKeys = {
-  // Common
   common: {
     loading: 'Ładowanie...',
     error: 'Błąd',
@@ -23,7 +22,6 @@ export const pl: TranslationKeys = {
     closeSidebar: 'Zamknij panel boczny',
   },
 
-  // Navigation
   nav: {
     dashboard: 'Panel',
     projects: 'Projekty',
@@ -31,7 +29,6 @@ export const pl: TranslationKeys = {
     help: 'Pomoc',
   },
 
-  // Project Dashboard
   dashboard: {
     title: 'Moje Projekty',
     createNew: 'Nowy Projekt',
@@ -42,7 +39,6 @@ export const pl: TranslationKeys = {
     lastModified: 'Ostatnia modyfikacja',
   },
 
-  // New Project Modal
   newProject: {
     title: 'Nowy Projekt',
     projectTitle: 'Nazwa Projektu',
@@ -82,7 +78,6 @@ export const pl: TranslationKeys = {
     failedToCreate: 'Nie udało się utworzyć projektu',
   },
 
-  // Tree Visualizer
   tree: {
     autoLayout: 'Automatyczny Układ',
     centerView: 'Wyśrodkuj',
@@ -112,7 +107,6 @@ export const pl: TranslationKeys = {
     scenarios: 'Scenariusze',
   },
 
-  // Node Sidebar
   node: {
     editNode: 'Edytuj Węzeł',
     nodeDetails: 'Szczegóły Węzła',
@@ -180,7 +174,6 @@ export const pl: TranslationKeys = {
     failedToDeleteNode: 'Nie udało się usunąć węzła',
   },
 
-  // Custom Node
   customNode: {
     showRadar: 'Pokaż Radar',
     showBars: 'Pokaż Paski',
@@ -189,7 +182,6 @@ export const pl: TranslationKeys = {
     expand: 'Rozwiń',
   },
 
-  // AI Strategic Advisor
   advisor: {
     title: 'Doradca AI',
     poweredBy: 'Napędzane przez Gemini AI',
@@ -216,7 +208,6 @@ export const pl: TranslationKeys = {
     generatingSuggestions: 'Generuję propozycje...',
   },
 
-  // Public View
   public: {
     sharedProject: 'Udostępniony Projekt',
     viewOnly: 'Tylko Odczyt',
@@ -230,7 +221,6 @@ export const pl: TranslationKeys = {
     communityVotes: 'Głosy Społeczności',
   },
 
-  // Errors
   errors: {
     failedToLoad: 'Nie udało się załadować',
     failedToSave: 'Nie udało się zapisać',
@@ -238,7 +228,6 @@ export const pl: TranslationKeys = {
     tryAgain: 'Spróbuj ponownie',
   },
 
-  // AI Chat
   aiChat: {
     title: 'Asystent AI',
     placeholder: 'Zapytaj o projekt...',
@@ -254,7 +243,6 @@ export const pl: TranslationKeys = {
     failedToGetResponse: 'Nie udało się uzyskać odpowiedzi. Spróbuj ponownie.',
   },
 
-  // Action Plan
   actionPlan: {
     title: 'Plan Działania',
     generateSteps: 'Generuj Kroki (AI)',
@@ -268,7 +256,6 @@ export const pl: TranslationKeys = {
     failedToDeleteTask: 'Nie udało się usunąć zadania',
   },
 
-  // Comments
   comments: {
     title: 'Komentarze',
     detailsTab: 'Szczegóły',
@@ -283,7 +270,6 @@ export const pl: TranslationKeys = {
     failedToDeleteComment: 'Nie udało się usunąć komentarza',
   },
 
-  // Global Action Board
   globalActionBoard: {
     title: 'Wszystkie Zadania',
     subtitle: 'Centrum zadań projektu',
@@ -300,7 +286,6 @@ export const pl: TranslationKeys = {
     failedToUpdateTask: 'Nie udało się zaktualizować zadania',
   },
 
-  // Project Timeline
   timeline: {
     title: 'Oś Czasu Projektu',
     subtitle: 'Chronologiczny widok wszystkich zadań',
@@ -317,7 +302,6 @@ export const pl: TranslationKeys = {
     locale: 'pl-PL',
   },
 
-  // Project Analytics
   analytics: {
     title: 'Pulpit Analityczny',
     subtitle: 'Statystyki finansowe, postęp zadań i oceny decyzji',
@@ -340,7 +324,6 @@ export const pl: TranslationKeys = {
     pending: 'Oczekujące',
   },
 
-  // Sections
   sections: {
     transport: 'Transport',
     accommodation: 'Zakwaterowanie',
@@ -353,7 +336,6 @@ export const pl: TranslationKeys = {
     general: 'Ogólne',
   },
 
-  // Floating Dashboard
   floatingDashboard: {
     summary: 'Podsumowanie',
     cost: 'Koszt',
@@ -363,7 +345,6 @@ export const pl: TranslationKeys = {
     risk: 'Ryzyko',
   },
 
-  // PDF Export
   pdf: {
     nodesSummary: 'Podsumowanie Węzłów',
     budgetSummary: 'Podsumowanie Budżetu',

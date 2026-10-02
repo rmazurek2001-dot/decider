@@ -32,7 +32,6 @@ export const LanguageProvider = ({ children }: { children: ReactNode }) => {
     if (saved && ['USD', 'PLN', 'EUR', 'GBP'].includes(saved)) {
       return saved as Currency
     }
-    // Domyślna waluta zależna od języka
     return language === 'pl' ? 'PLN' : 'USD'
   })
 
@@ -40,7 +39,6 @@ export const LanguageProvider = ({ children }: { children: ReactNode }) => {
     setLanguageState(lang)
     localStorage.setItem('language', lang)
     
-    // Automatycznie zmień walutę jeśli nie była ręcznie ustawiona
     const manualCurrency = localStorage.getItem('currency-manual')
     if (!manualCurrency) {
       const newCurrency = lang === 'pl' ? 'PLN' : 'USD'
@@ -52,7 +50,7 @@ export const LanguageProvider = ({ children }: { children: ReactNode }) => {
   const setCurrency = (curr: Currency) => {
     setCurrencyState(curr)
     localStorage.setItem('currency', curr)
-    localStorage.setItem('currency-manual', 'true') // Oznacz jako ręcznie ustawioną
+    localStorage.setItem('currency-manual', 'true')
   }
 
   const formatCurrency = (amount: number | string): string => {

@@ -14,7 +14,6 @@ class Project(models.Model):
     )
     share_token = models.UUIDField(default=uuid.uuid4, unique=True, editable=False)
     
-    # ✅ NOWE v1.29.0: Single Source of Truth dla stanu UI
     ui_state = models.JSONField(
         default=dict,
         blank=True,
@@ -51,8 +50,8 @@ class DecisionNode(models.Model):
     ]
     
     NODE_TYPE_CHOICES = [
-        ('decision', 'Decision'),  # Konkretna opcja z ratingami i ceną
-        ('milestone', 'Milestone'),  # Etap organizacyjny bez ratingów
+        ('decision', 'Decision'),
+        ('milestone', 'Milestone'),
     ]
     
     project = models.ForeignKey(
@@ -84,7 +83,6 @@ class DecisionNode(models.Model):
         help_text="Actual cost incurred (filled manually during execution)"
     )
     
-    # Node type
     node_type = models.CharField(
         max_length=20,
         choices=NODE_TYPE_CHOICES,
@@ -92,7 +90,6 @@ class DecisionNode(models.Model):
         help_text="Type of node: decision (with ratings) or milestone (organizational)"
     )
     
-    # Section/Category
     section = models.CharField(
         max_length=50,
         choices=SECTION_CHOICES,
@@ -100,13 +97,11 @@ class DecisionNode(models.Model):
         help_text="Category/section of this decision"
     )
     
-    # Chronological order
     order = models.IntegerField(
         default=0,
         help_text="Chronological order (0 = first, higher = later)"
     )
     
-    # Multi-dimensional scoring (0-100)
     score_comfort = models.IntegerField(
         default=50,
         validators=[MinValueValidator(0)],
@@ -128,7 +123,6 @@ class DecisionNode(models.Model):
         help_text="Pleasure/satisfaction level (0-100)"
     )
     
-    # Node status
     status = models.CharField(
         max_length=20,
         choices=STATUS_CHOICES,
@@ -136,7 +130,6 @@ class DecisionNode(models.Model):
         help_text="Current status of this decision node"
     )
     
-    # Position coordinates for ReactFlow visualization
     position_x = models.FloatField(
         default=0.0,
         help_text="X coordinate for node position in ReactFlow canvas"
@@ -256,11 +249,9 @@ class Comment(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:
-        ordering = ['created_at']  # Chronologicznie (najstarsze pierwsze)
+        ordering = ['created_at']
 
     def __str__(self):
         return f"{self.author_name}: {self.content[:50]}"
-
-
 
 

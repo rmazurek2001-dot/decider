@@ -2,7 +2,6 @@ import { test, expect } from '@playwright/test'
 
 const API_URL = 'http://localhost:8000'
 
-// Helper function to seed test data with HIERARCHICAL RELATIONS
 async function seedHierarchicalProject(request: any) {
   const response = await request.post(`${API_URL}/api/testing/seed-project/`)
   
@@ -17,16 +16,6 @@ async function seedHierarchicalProject(request: any) {
   return data
 }
 
-/**
- * 🚨 KRYTYCZNY TEST: LOGIKA AUTO-LAYOUT
- * 
- * Ten test sprawdza czy Auto-Layout RZECZYWIŚCIE buduje hierarchię.
- * Sprawdza pozycje Rodzic vs Dziecko po zastosowaniu DAGRE.
- * 
- * ZAKAZ: force: true, evaluate dla kliknięć
- * WYMAGANE: Fizyczne kliknięcie Auto-Layout, sprawdzenie hierarchii w DOM
- */
-
 test.describe('CRITICAL: Auto-Layout Logic', () => {
   let testProjectId: number
   let testShareToken: string
@@ -40,11 +29,9 @@ test.describe('CRITICAL: Auto-Layout Logic', () => {
   test('should create proper hierarchy with Auto-Layout', async ({ page }) => {
     console.log('🚨 KRYTYCZNY TEST: Hierarchia Auto-Layout w EDYTORZE')
     
-    // Go to dashboard first
     await page.goto('http://localhost:5173/')
     await page.waitForTimeout(2000)
     
-    // Login if needed
     const emailInput = page.locator('input[type="email"]')
     if (await emailInput.isVisible()) {
       await emailInput.fill('test@example.com')
@@ -55,11 +42,9 @@ test.describe('CRITICAL: Auto-Layout Logic', () => {
       await page.waitForTimeout(2000)
     }
     
-    // Go to project EDITOR (NOT SharedProjectView!)
     await page.goto(`http://localhost:5173/project/${testProjectId}`)
     await page.waitForTimeout(5000)
     
-    // Wait for nodes and Auto-Layout button
     const nodes = page.locator('.react-flow__node')
     await expect(nodes.first()).toBeVisible({ timeout: 10000 })
     
@@ -68,7 +53,6 @@ test.describe('CRITICAL: Auto-Layout Logic', () => {
     
     console.log('📊 Analyzing node hierarchy BEFORE Auto-Layout...')
     
-    // Get all nodes and their positions before Auto-Layout
     const nodeCount = await nodes.count()
     console.log(`📊 Found ${nodeCount} nodes`)
     
@@ -79,7 +63,6 @@ test.describe('CRITICAL: Auto-Layout Logic', () => {
       const style = await node.getAttribute('style')
       const bbox = await node.boundingBox()
       
-      // Extract position from transform
       const transform = style?.match(/translate\(([^,]+),\s*([^)]+)\)/)
       if (transform && bbox) {
         const x = parseFloat(transform[1].replace('px', ''))
@@ -96,16 +79,13 @@ test.describe('CRITICAL: Auto-Layout Logic', () => {
       }
     }
     
-    // PHYSICAL CLICK on Auto-Layout button - NO FORCE
     console.log('🎛️ Clicking Auto-Layout button...')
     await autoLayoutButton.click()
     
-    // Wait for layout to complete
     await page.waitForTimeout(3000)
     
     console.log('📊 Analyzing node hierarchy AFTER Auto-Layout...')
     
-    // Get all nodes and their positions after Auto-Layout
     const nodesAfter: Array<{id: string, x: number, y: number, bbox: any}> = []
     
     for (let i = 0; i < nodeCount; i++) {
@@ -113,7 +93,6 @@ test.describe('CRITICAL: Auto-Layout Logic', () => {
       const style = await node.getAttribute('style')
       const bbox = await node.boundingBox()
       
-      // Extract position from transform
       const transform = style?.match(/translate\(([^,]+),\s*([^)]+)\)/)
       if (transform && bbox) {
         const x = parseFloat(transform[1].replace('px', ''))
@@ -129,10 +108,7 @@ test.describe('CRITICAL: Auto-Layout Logic', () => {
         console.log(`📍 Node ${i} AFTER: pos=(${x}, ${y}), bbox=(${bbox.x}, ${bbox.y})`)
       }
     }
-    
-    // CRITICAL ASSERTIONS: Check if hierarchy was created
-    
-    // 1. Nodes should have moved (not random placement)
+
     let nodesMoved = 0
     for (let i = 0; i < nodesBefore.length && i < nodesAfter.length; i++) {
       const before = nodesBefore[i]
@@ -149,20 +125,16 @@ test.describe('CRITICAL: Auto-Layout Logic', () => {
     }
     
     console.log(`🔄 Nodes moved: ${nodesMoved}/${nodeCount}`)
-    expect(nodesMoved).toBeGreaterThan(0) // At least some nodes should move
+    expect(nodesMoved).toBeGreaterThan(0)
     
-    // 2. Check for hierarchical arrangement
-    // In a proper hierarchy, nodes should be arranged in levels (different Y coordinates)
-    const uniqueYPositions = new Set(nodesAfter.map(n => Math.round(n.y / 50) * 50)) // Group by 50px
-    const uniqueXPositions = new Set(nodesAfter.map(n => Math.round(n.x / 50) * 50)) // Group by 50px
+    const uniqueYPositions = new Set(nodesAfter.map(n => Math.round(n.y / 50) * 50))
+    const uniqueXPositions = new Set(nodesAfter.map(n => Math.round(n.x / 50) * 50))
     
     console.log(`📏 Unique Y levels: ${uniqueYPositions.size}`)
     console.log(`📏 Unique X levels: ${uniqueXPositions.size}`)
     
-    // For hierarchical layout, we should have multiple levels (Y positions)
-    expect(uniqueYPositions.size).toBeGreaterThan(1) // Should have at least 2 levels
+    expect(uniqueYPositions.size).toBeGreaterThan(1)
     
-    // 3. Check for proper spacing (no overlapping)
     let overlappingNodes = 0
     for (let i = 0; i < nodesAfter.length; i++) {
       for (let j = i + 1; j < nodesAfter.length; j++) {
@@ -174,7 +146,6 @@ test.describe('CRITICAL: Auto-Layout Logic', () => {
           Math.pow(node2.y - node1.y, 2)
         )
         
-        // Nodes should be at least 100px apart (considering node size ~320px)
         if (distance < 100) {
           overlappingNodes++
           console.log(`⚠️ Nodes ${i} and ${j} are too close: ${distance.toFixed(1)}px`)
@@ -183,7 +154,7 @@ test.describe('CRITICAL: Auto-Layout Logic', () => {
     }
     
     console.log(`📐 Overlapping node pairs: ${overlappingNodes}`)
-    expect(overlappingNodes).toBe(0) // No nodes should overlap
+    expect(overlappingNodes).toBe(0)
     
     console.log('✅ KRYTYCZNY TEST PRZESZEDŁ: Auto-Layout tworzy właściwą hierarchię')
   })
@@ -191,11 +162,9 @@ test.describe('CRITICAL: Auto-Layout Logic', () => {
   test('should verify DAGRE receives edges for hierarchy', async ({ page }) => {
     console.log('🚨 KRYTYCZNY TEST: Sprawdzanie czy DAGRE otrzymuje edges w EDYTORZE')
     
-    // Go to dashboard first
     await page.goto('http://localhost:5173/')
     await page.waitForTimeout(2000)
     
-    // Login if needed
     const emailInput = page.locator('input[type="email"]')
     if (await emailInput.isVisible()) {
       await emailInput.fill('test@example.com')
@@ -206,20 +175,16 @@ test.describe('CRITICAL: Auto-Layout Logic', () => {
       await page.waitForTimeout(2000)
     }
     
-    // Go to project EDITOR (NOT SharedProjectView!)
     await page.goto(`http://localhost:5173/project/${testProjectId}`)
     await page.waitForTimeout(5000)
     
-    // Check if there are edges in the graph
     const edges = page.locator('.react-flow__edge')
     const edgeCount = await edges.count()
     
     console.log(`🔗 Found ${edgeCount} edges in React Flow`)
     
-    // For proper hierarchy, we need edges (parent-child relationships)
     expect(edgeCount).toBeGreaterThan(0)
     
-    // Check if edges are visible
     if (edgeCount > 0) {
       await expect(edges.first()).toBeVisible()
       console.log('✅ Edges are visible - hierarchy relationships exist')

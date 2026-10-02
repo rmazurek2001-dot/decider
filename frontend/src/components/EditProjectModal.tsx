@@ -30,7 +30,6 @@ const EditProjectModal = ({ isOpen, onClose, project, onProjectUpdated }: EditPr
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
-  // Update form when project changes
   useEffect(() => {
     setFormData({
       title: project.title,
@@ -52,7 +51,6 @@ const EditProjectModal = ({ isOpen, onClose, project, onProjectUpdated }: EditPr
       return
     }
 
-    // Walidacja budżetu
     const budgetNum = parseFloat(formData.budget_total)
     if (isNaN(budgetNum) || budgetNum < 0) {
       setError(language === 'pl' ? 'Budżet musi być liczbą większą lub równą 0' : 'Budget must be a number greater than or equal to 0')
@@ -63,9 +61,7 @@ const EditProjectModal = ({ isOpen, onClose, project, onProjectUpdated }: EditPr
     setError(null)
 
     try {
-      // Konwertuj budget_total na string z dwoma miejscami po przecinku
       const budgetValue = formData.budget_total ? parseFloat(formData.budget_total).toFixed(2) : '0.00'
-      
 
       await axios.patch(`${API_URL}/api/projects/${project.id}/`, {
         title: formData.title,
@@ -73,17 +69,13 @@ const EditProjectModal = ({ isOpen, onClose, project, onProjectUpdated }: EditPr
         budget_total: budgetValue,
       })
 
-      
-      // Najpierw zamknij modal
       onClose()
       
-      // Potem zaktualizuj dane projektu
       onProjectUpdated()
     } catch (err: any) {
       console.error('[EditProjectModal] Error updating project:', err)
       console.error('[EditProjectModal] Error response:', err.response?.data)
       
-      // Pokaż szczegółowy błąd
       let errorMessage = t.errors.failedToSave
       if (err.response?.data) {
         if (err.response.data.budget_total) {
@@ -105,7 +97,6 @@ const EditProjectModal = ({ isOpen, onClose, project, onProjectUpdated }: EditPr
   return (
     <AnimatePresence>
       <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-        {/* Backdrop */}
         <motion.div
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
@@ -114,14 +105,12 @@ const EditProjectModal = ({ isOpen, onClose, project, onProjectUpdated }: EditPr
           className="absolute inset-0 bg-black/50 backdrop-blur-sm"
         />
 
-        {/* Modal */}
         <motion.div
           initial={{ opacity: 0, scale: 0.95, y: 20 }}
           animate={{ opacity: 1, scale: 1, y: 0 }}
           exit={{ opacity: 0, scale: 0.95, y: 20 }}
           className="relative bg-white rounded-2xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-hidden"
         >
-          {/* Header */}
           <div className="flex items-center justify-between p-6 border-b border-slate-200">
             <h2 className="text-2xl font-bold text-slate-900">
               {language === 'pl' ? 'Edytuj Projekt' : 'Edit Project'}
@@ -134,9 +123,7 @@ const EditProjectModal = ({ isOpen, onClose, project, onProjectUpdated }: EditPr
             </button>
           </div>
 
-          {/* Form */}
           <form onSubmit={handleSubmit} className="p-6 space-y-6 overflow-y-auto max-h-[calc(90vh-140px)]">
-            {/* Error Message */}
             {error && (
               <motion.div
                 initial={{ opacity: 0, y: -10 }}
@@ -147,7 +134,6 @@ const EditProjectModal = ({ isOpen, onClose, project, onProjectUpdated }: EditPr
               </motion.div>
             )}
 
-            {/* Project Title */}
             <div>
               <label className="block text-sm font-semibold text-slate-700 mb-2">
                 {t.newProject.projectTitle}
@@ -162,7 +148,6 @@ const EditProjectModal = ({ isOpen, onClose, project, onProjectUpdated }: EditPr
               />
             </div>
 
-            {/* Description */}
             <div>
               <label className="block text-sm font-semibold text-slate-700 mb-2">
                 {t.newProject.description}
@@ -177,7 +162,6 @@ const EditProjectModal = ({ isOpen, onClose, project, onProjectUpdated }: EditPr
               />
             </div>
 
-            {/* Total Budget */}
             <div>
               <label className="block text-sm font-semibold text-slate-700 mb-2">
                 {t.newProject.totalBudget}
@@ -200,7 +184,6 @@ const EditProjectModal = ({ isOpen, onClose, project, onProjectUpdated }: EditPr
             </div>
           </form>
 
-          {/* Footer */}
           <div className="flex items-center justify-end gap-3 p-6 border-t border-slate-200 bg-slate-50">
             <button
               type="button"

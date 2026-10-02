@@ -2,9 +2,6 @@ import { Page } from '@playwright/test'
 
 const API_URL = 'http://localhost:8000'
 
-/**
- * Helper function to seed test data with retry logic
- */
 export async function seedTestProject(request: any, retries = 3) {
   for (let attempt = 1; attempt <= retries; attempt++) {
     try {
@@ -19,7 +16,6 @@ export async function seedTestProject(request: any, retries = 3) {
           throw new Error(`Failed to seed test project after ${retries} attempts: ${response.status()}`)
         }
         
-        // Wait before retry
         await new Promise(resolve => setTimeout(resolve, 1000 * attempt))
         continue
       }
@@ -35,20 +31,15 @@ export async function seedTestProject(request: any, retries = 3) {
         throw error
       }
       
-      // Wait before retry
       await new Promise(resolve => setTimeout(resolve, 1000 * attempt))
     }
   }
 }
 
-/**
- * Wait for layout ready signal - updated for new TreeVisualizer and SharedProjectView
- */
 export async function waitForLayoutReady(page: Page, timeout = 15000) {
   try {
     console.log('🔄 Waiting for components to exist...')
     
-    // First wait for either component to exist
     await page.waitForFunction(() => {
       const treeVisualizer = document.querySelector('[data-component="new-tree-visualizer"]')
       const sharedView = document.querySelector('[data-testid="shared-view-container"]')
@@ -57,7 +48,6 @@ export async function waitForLayoutReady(page: Page, timeout = 15000) {
     
     console.log('✅ Components found, waiting for layout ready signal...')
     
-    // Then wait for layout ready signal
     await page.waitForFunction(() => {
       const treeVisualizer = document.querySelector('[data-component="new-tree-visualizer"]')
       const sharedView = document.querySelector('[data-testid="shared-view-container"]')
@@ -75,11 +65,9 @@ export async function waitForLayoutReady(page: Page, timeout = 15000) {
     console.log('⚠️ Layout ready timeout, checking current state...')
     
     try {
-      // Log current page URL and state
       const currentUrl = page.url()
       console.log(`📍 Current URL: ${currentUrl}`)
       
-      // Log current state for debugging
       const currentState = await page.evaluate(() => {
         const treeVisualizer = document.querySelector('[data-component="new-tree-visualizer"]')
         const sharedView = document.querySelector('[data-testid="shared-view-container"]')
@@ -100,13 +88,11 @@ export async function waitForLayoutReady(page: Page, timeout = 15000) {
       
       console.log('Current state:', currentState)
       
-      // If we have nodes, consider it ready even without the signal
       if (currentState.nodeCount > 0) {
         console.log('✅ Nodes are present, considering layout ready')
         return
       }
       
-      // If there's an error message, throw a more specific error
       if (currentState.hasErrorMessage) {
         throw new Error(`Page shows error content: ${currentState.bodyText}`)
       }
@@ -119,9 +105,6 @@ export async function waitForLayoutReady(page: Page, timeout = 15000) {
   }
 }
 
-/**
- * Get layout ready status - updated for new TreeVisualizer
- */
 export async function getLayoutReadyStatus(page: Page) {
   return await page.evaluate(() => {
     const wrapper = document.querySelector('[data-component="new-tree-visualizer"]')
@@ -129,16 +112,10 @@ export async function getLayoutReadyStatus(page: Page) {
   })
 }
 
-/**
- * Get auto layout button with responsive selector
- */
 export function getAutoLayoutButton(page: Page) {
   return page.getByTestId('auto-layout-button')
 }
 
-/**
- * Get layout controls container with responsive selector
- */
 export function getLayoutControls(page: Page) {
   return page.locator('.fixed.right-2, .fixed.right-4').first()
 }
