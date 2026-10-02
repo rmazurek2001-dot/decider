@@ -18,7 +18,7 @@ import {
   Legend,
   ResponsiveContainer,
 } from 'recharts'
-import { BarChart3, TrendingUp, TrendingDown, CheckCircle, Clock, Loader, AlertCircle } from 'lucide-react'
+import { BarChart3, TrendingUp, TrendingDown, CheckCircle, Loader, AlertCircle } from 'lucide-react'
 import { useLanguage } from '../contexts/LanguageContext'
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000'
@@ -132,7 +132,6 @@ const ProjectAnalytics = ({ projectId }: ProjectAnalyticsProps) => {
     { name: t.node.statusPending, value: data.decisions_summary.pending, color: '#94a3b8' },
   ]
 
-  const isOverBudget = data.budget_summary.variance > 0
   const isSavings = data.budget_summary.variance < 0
 
   return (
@@ -291,7 +290,7 @@ const ProjectAnalytics = ({ projectId }: ProjectAnalyticsProps) => {
                   cx="50%"
                   cy="50%"
                   labelLine={false}
-                  label={({ name, percent }) => `${name}: ${(percent * 100).toFixed(0)}%`}
+                  label={({ name, percent }) => `${name}: ${((percent ?? 0) * 100).toFixed(0)}%`}
                   outerRadius={80}
                   fill="#8884d8"
                   dataKey="value"
@@ -315,7 +314,7 @@ const ProjectAnalytics = ({ projectId }: ProjectAnalyticsProps) => {
                   cx="50%"
                   cy="50%"
                   labelLine={false}
-                  label={({ name, percent }) => `${name}: ${(percent * 100).toFixed(0)}%`}
+                  label={({ name, percent }) => `${name}: ${((percent ?? 0) * 100).toFixed(0)}%`}
                   outerRadius={80}
                   fill="#8884d8"
                   dataKey="value"

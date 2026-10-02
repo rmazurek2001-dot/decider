@@ -24,7 +24,7 @@ const sectionConfig: Record<string, { label: string; labelPL: string; icon: stri
 
 const SectionHeader = ({ section, nodeCount, y, collapsed, onToggle }: SectionHeaderProps) => {
   const config = sectionConfig[section] || sectionConfig.general
-  const { language, t } = useLanguage()
+  const { language } = useLanguage()
   const label = language === 'pl' ? config.labelPL : config.label
 
   const hiddenText = language === 'pl' ? 'Ukryta' : 'Hidden'

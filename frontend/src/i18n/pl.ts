@@ -174,6 +174,8 @@ export const pl: TranslationKeys = {
     failedToUpdateStatus: 'Nie udało się zaktualizować statusu',
     select: 'Wybierz',
     reject: 'Odrzuć',
+    selected: 'Wybrane',
+    rejected: 'Odrzucone',
     pending: 'Oczekujący',
     failedToDeleteNode: 'Nie udało się usunąć węzła',
   },

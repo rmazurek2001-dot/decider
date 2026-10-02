@@ -227,6 +227,15 @@ const PublicProjectView = ({ token }: PublicProjectViewProps) => {
     }
   }, [fetchTree, selectedNode, nodeDataMap])
 
+  const defaultEdgeOptions = useMemo(
+    () => ({
+      type: 'smoothstep',
+      animated: true,
+      style: { stroke: '#6366f1', strokeWidth: 2 },
+    }),
+    []
+  )
+
   if (loading) {
     return (
       <div className="flex items-center justify-center h-full">
@@ -245,15 +254,6 @@ const PublicProjectView = ({ token }: PublicProjectViewProps) => {
       </div>
     )
   }
-
-  const defaultEdgeOptions = useMemo(
-    () => ({
-      type: 'smoothstep',
-      animated: true,
-      style: { stroke: '#6366f1', strokeWidth: 2 },
-    }),
-    []
-  )
 
   return (
     <div className="w-full h-full relative bg-slate-50">

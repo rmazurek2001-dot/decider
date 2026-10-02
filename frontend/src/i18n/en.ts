@@ -172,6 +172,8 @@ export const en = {
     failedToUpdateStatus: 'Failed to update status',
     select: 'Select',
     reject: 'Reject',
+    selected: 'Selected',
+    rejected: 'Rejected',
     pending: 'Pending',
     failedToDeleteNode: 'Failed to delete node',
   },

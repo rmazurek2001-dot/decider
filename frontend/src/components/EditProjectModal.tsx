@@ -67,7 +67,7 @@ const EditProjectModal = ({ isOpen, onClose, project, onProjectUpdated }: EditPr
       const budgetValue = formData.budget_total ? parseFloat(formData.budget_total).toFixed(2) : '0.00'
       
 
-      const response = await axios.patch(`${API_URL}/api/projects/${project.id}/`, {
+      await axios.patch(`${API_URL}/api/projects/${project.id}/`, {
         title: formData.title,
         description: formData.description,
         budget_total: budgetValue,

@@ -14,7 +14,6 @@ import ReactFlow, {
   useEdgesState,
   NodeMouseHandler,
   MarkerType,
-  Position,
   useReactFlow,
 } from 'reactflow'
 import 'reactflow/dist/style.css'
@@ -45,7 +44,7 @@ const SharedProjectView = ({ token }: SharedProjectViewProps) => {
   const [error, setError] = useState<string | null>(null)
   const [project, setProject] = useState<PublicProject | null>(null)
   const [treeData, setTreeData] = useState<PublicDecisionNode[]>([])
-  const [selectedNodeId, setSelectedNodeId] = useState<number | null>(null)
+  const [, setSelectedNodeId] = useState<number | null>(null)
   const [selectedNode, setSelectedNode] = useState<PublicDecisionNode | null>(null)
   const [sidebarOpen, setSidebarOpen] = useState(false)
   const collapsedNodesRef = useRef<Set<number>>(new Set())
@@ -120,21 +119,15 @@ const SharedProjectView = ({ token }: SharedProjectViewProps) => {
           const isChildMilestone = nodeData.node_type === 'milestone'
           const isParentMilestone = parentNode.data.node_type === 'milestone'
 
-          let sourcePos = Position.Bottom
-          let targetPos = Position.Top
           let sourceHandle = 'bottom'
           let targetHandle = 'top'
 
           if (!isChildMilestone && isParentMilestone) {
             const isChildOnRight = flowNode.position.x >= parentNode.position.x
             if (isChildOnRight) {
-              sourcePos = Position.Right
-              targetPos = Position.Left
               sourceHandle = 'right'
               targetHandle = 'left'
             } else {
-              sourcePos = Position.Left
-              targetPos = Position.Right
               sourceHandle = 'left-source'
               targetHandle = 'right-target'
             }
@@ -165,8 +158,6 @@ const SharedProjectView = ({ token }: SharedProjectViewProps) => {
             target: `node-${nodeData.id}`,
             sourceHandle,
             targetHandle,
-            sourcePosition: sourcePos,
-            targetPosition: targetPos,
             type: 'smoothstep',
             animated: !exceedsBudget,
             style: {

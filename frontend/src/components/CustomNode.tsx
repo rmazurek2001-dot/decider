@@ -3,9 +3,8 @@ import type React from 'react'
 import { Handle, Position, NodeProps } from 'reactflow'
 import { motion } from 'framer-motion'
 import {
-  Target, ShoppingCart, Home, Calendar, Users, CheckCircle2, XCircle, ChevronDown, ChevronUp, MoreVertical, Plus, Trash2, Star, MessageCircle,
+  Calendar, ChevronDown, ChevronUp, MoreVertical, Plus, Trash2, Star, MessageCircle,
 } from 'lucide-react'
-import { RadarChart, PolarGrid, PolarAngleAxis, Radar, ResponsiveContainer } from 'recharts'
 import { useLanguage } from '../contexts/LanguageContext'
 
 // ... (Interface CustomNodeData bez zmian) ...
@@ -43,15 +42,13 @@ interface CustomNodeData {
 }
 
 // Helper functions (uproszczone)
-const getSectionColor = (section?: string) => ({ bg: 'bg-white', border: 'border-slate-300', text: 'text-slate-700', icon: '📋' })
-const getNodeIcon = (title: string) => <Calendar style={{ width: '100%', height: '100%' }} /> 
-const getStatusColor = (exceeds: boolean, isRoot: boolean, status?: string, isWinning?: boolean) => {
+const getNodeIcon = () => <Calendar style={{ width: '100%', height: '100%' }} /> 
+const getStatusColor = (status?: string) => {
     // Winning path NIE zmienia koloru - tylko dodaje ikonę
     if (status === 'selected') return 'from-emerald-500 to-emerald-600'
     return 'from-indigo-500 to-indigo-600'
 }
-const getCostBadgeColor = (cost: number) => 'bg-emerald-100 text-emerald-700'
-const calculateValueRating = (c: number, r: number, t: number, p: number, cost: number) => ({ rating: 90, label: 'Value', color: 'text-emerald-500' })
+const calculateValueRating = () => ({ rating: 90, label: 'Value', color: 'text-emerald-500' })
 
 // --- MENU KONTEKSTOWE ---
 const NodeContextMenu = ({ data, language }: { data: CustomNodeData; language: string }) => {
@@ -114,7 +111,7 @@ const NodeContextMenu = ({ data, language }: { data: CustomNodeData; language: s
 
 // --- KOMPONENTY RENDERUJĄCE ---
 
-const renderMilestoneNode = (data: CustomNodeData, sectionColors: any, statusGradient: string, language: string, formatCurrency: (value: string | number) => string) => {
+const renderMilestoneNode = (data: CustomNodeData, statusGradient: string, language: string, formatCurrency: (value: string | number) => string) => {
   return (
     <div
       style={{
@@ -135,7 +132,7 @@ const renderMilestoneNode = (data: CustomNodeData, sectionColors: any, statusGra
           {/* Ikona ultra gigantyczna */}
           <div className="w-96 h-96 bg-indigo-600 rounded-[90px] flex items-center justify-center flex-shrink-0 shadow-lg">
             <div className="w-60 h-60 text-white">
-              {getNodeIcon(data.title)}
+              {getNodeIcon()}
             </div>
           </div>
           
@@ -184,18 +181,12 @@ const renderMilestoneNode = (data: CustomNodeData, sectionColors: any, statusGra
 
 const renderOptionNode = (
   data: CustomNodeData,
-  sectionColors: any,
-  statusGradient: string,
   cost: number,
-  costBadgeClass: string,
   isSelected: boolean,
   isRejected: boolean,
   isWinning: boolean,
   valueRating: any,
-  avgScore: number,
   radarData: any[],
-  showRadar: boolean,
-  setShowRadar: (show: boolean) => void,
   formatCurrency: (value: string | number) => string,
   language: string
 ) => {
@@ -236,7 +227,7 @@ const renderOptionNode = (
                     <div className="flex gap-24 flex-1 min-w-0">
                         {/* IKONA OPCJI */}
                         <div className="w-80 h-80 rounded-[60px] bg-slate-800 text-white flex items-center justify-center flex-shrink-0">
-                            <div className="w-48 h-48">{getNodeIcon(data.title)}</div>
+                            <div className="w-48 h-48">{getNodeIcon()}</div>
                         </div>
                         
                         <div className="flex-1 min-w-0">
@@ -337,14 +328,11 @@ const renderOptionNode = (
 }
 
 const CustomNode = ({ data }: NodeProps<CustomNodeData>) => {
-  const [showRadar, setShowRadar] = useState(false)
   const { formatCurrency, language, t } = useLanguage()
   
   const isMilestone = data.node_type === 'milestone'
   const cost = parseFloat(data.estimated_cost) || 0
-  const isRoot = !data.pathCost || data.pathCost === cost
-  const statusGradient = getStatusColor(data.exceedsBudget, isRoot, data.status, data.isOnWinningPath)
-  const sectionColors = getSectionColor(data.section)
+  const statusGradient = getStatusColor(data.status)
   
   const radarData = [
     { subject: t.node.comfort, value: data.score_comfort || 0 },
@@ -352,8 +340,7 @@ const CustomNode = ({ data }: NodeProps<CustomNodeData>) => {
     { subject: language === 'pl' ? 'Czas' : 'Time', value: data.score_time || 0 },
     { subject: t.node.joy, value: data.score_pleasure || 0 },
   ]
-  const avgScore = radarData.reduce((a,b)=>a+b.value,0)/4
-  const valueRating = calculateValueRating(data.score_comfort||0, data.score_risk||0, data.score_time||0, data.score_pleasure||0, cost)
+  const valueRating = calculateValueRating()
 
   if (isMilestone) {
     return (
@@ -365,7 +352,7 @@ const CustomNode = ({ data }: NodeProps<CustomNodeData>) => {
                 <span className="font-black text-white" style={{ fontSize: '60px' }}>{data.order}</span>
             </div>
         )}
-        {renderMilestoneNode(data, sectionColors, statusGradient, language, formatCurrency)}
+        {renderMilestoneNode(data, statusGradient, language, formatCurrency)}
         {/* ✅ Wszystkie 4 strony - niewidoczne punkty zaczepienia */}
         <Handle type="target" position={Position.Top} id="top" className="w-1 h-1 opacity-0" />
         <Handle type="source" position={Position.Bottom} id="bottom" className="w-1 h-1 opacity-0" />
@@ -380,7 +367,7 @@ const CustomNode = ({ data }: NodeProps<CustomNodeData>) => {
 
   return (
     <motion.div initial={{ x: -20, opacity: 0 }} animate={{ x: 0, opacity: 1 }} className="group relative">
-        {renderOptionNode(data, sectionColors, statusGradient, cost, '', data.status==='selected', data.status==='rejected', data.isOnWinningPath, valueRating, avgScore, radarData, showRadar, setShowRadar, formatCurrency, language)}
+        {renderOptionNode(data, cost, data.status==='selected', data.status==='rejected', !!data.isOnWinningPath, valueRating, radarData, formatCurrency, language)}
         {/* ✅ Wszystkie 4 strony - niewidoczne punkty zaczepienia */}
         <Handle type="target" position={Position.Top} id="top" className="w-1 h-1 opacity-0" />
         <Handle type="source" position={Position.Bottom} id="bottom" className="w-1 h-1 opacity-0" />

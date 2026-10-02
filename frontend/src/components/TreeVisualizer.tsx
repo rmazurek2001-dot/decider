@@ -9,7 +9,6 @@ import ReactFlow, {
   MiniMap,
   useNodesState,
   useEdgesState,
-  addEdge,
   Connection,
   NodeMouseHandler,
   useReactFlow,
@@ -90,6 +89,8 @@ interface Project {
   title: string
   description: string
   budget_total: string
+  ui_state?: Record<string, unknown> | null
+  share_token?: string
 }
 
 interface TreeVisualizerProps {
@@ -156,7 +157,7 @@ const TreeVisualizer = ({ projectId }: TreeVisualizerProps) => {
     setTimeout(() => {
       // Klatka animacji dla przeglądarki (paint)
       window.requestAnimationFrame(() => {
-        const worked = fitView({ 
+        fitView({ 
           padding: 0.5, 
           duration: 1000, 
           maxZoom: 0.25,
@@ -425,7 +426,6 @@ const TreeVisualizer = ({ projectId }: TreeVisualizerProps) => {
       // To zachowuje wszystkie węzły z ich pozycjami!
       setNodes(currentNodes => {
         const updatedNodes = currentNodes.map(node => {
-          const nodeId = node.data.nodeId
           const nodeType = node.data.node_type
           const parent = node.data.parent
           const section = node.data.section || 'general'
@@ -454,8 +454,6 @@ const TreeVisualizer = ({ projectId }: TreeVisualizerProps) => {
           // Fallback: pokaż węzeł
           return { ...node, hidden: false }
         })
-
-        const visibleCount = updatedNodes.filter(n => !n.hidden).length
 
         // ✅ KRYTYCZNE: Aktualizuj edges
         const visibleNodes = updatedNodes.filter(n => !n.hidden)
@@ -507,8 +505,6 @@ const TreeVisualizer = ({ projectId }: TreeVisualizerProps) => {
               const isWinning = node.data.isOnWinningPath
               
               // ✅ UPROSZCZENIE v1.29.2.3: TYLKO połączenia pionowe (dół → góra)
-              const sourcePos = Position.Bottom
-              const targetPos = Position.Top
               const sourceHandle = 'bottom'
               const targetHandle = 'top'
               
@@ -537,8 +533,6 @@ const TreeVisualizer = ({ projectId }: TreeVisualizerProps) => {
                 source: parentNode.id,
                 target: node.id,
                 type: 'smoothstep',
-                sourcePosition: sourcePos,
-                targetPosition: targetPos,
                 sourceHandle: sourceHandle,
                 targetHandle: targetHandle,
                 animated: isSelected, // Tylko selected jest animowany
@@ -607,15 +601,14 @@ const TreeVisualizer = ({ projectId }: TreeVisualizerProps) => {
       // ✅ KRYTYCZNA NAPRAWA: Użyj .map() zamiast .filter() żeby ZACHOWAĆ wszystkie nodes!
       // Zamiast usuwać nodes, ustaw hidden: true/false
       const updatedNodes = layoutedNodes.map(node => {
-        const nodeId = node.data.nodeId
         const nodeType = node.data.node_type
         const parent = node.data.parent
         const section = node.data.section || 'general'
         
         // ✅ NOWA LOGIKA: Określ pozycje uchwytów (handles)
         // ✅ UPROSZCZENIE v1.29.2.3: TYLKO połączenia pionowe (dół → góra)
-        let targetPos = Position.Top
-        let sourcePos = Position.Bottom
+        const targetPos = Position.Top
+        const sourcePos = Position.Bottom
         
         // FILTR 1: Sekcja ukryta? Ukryj węzeł
         if (collapsedSections.has(section)) {
@@ -667,8 +660,6 @@ const TreeVisualizer = ({ projectId }: TreeVisualizerProps) => {
           source: source.id,
           target: target.id,
           type: 'smoothstep',
-          sourcePosition: Position.Bottom,
-          targetPosition: Position.Top,
           animated: false,
           style: {
             strokeWidth: 12, // Zmniejszono z 16 na 12 (opcje mają 6-10px)
@@ -701,8 +692,6 @@ const TreeVisualizer = ({ projectId }: TreeVisualizerProps) => {
             const isWinning = node.data.isOnWinningPath
             
             // ✅ UPROSZCZENIE v1.29.2.3: TYLKO połączenia pionowe (dół → góra)
-            const sourcePos = Position.Bottom
-            const targetPos = Position.Top
             const sourceHandle = 'bottom'
             const targetHandle = 'top'
             
@@ -737,8 +726,6 @@ const TreeVisualizer = ({ projectId }: TreeVisualizerProps) => {
               type: 'smoothstep', // Ładne kąty proste
               
               // Wymuszamy konkretne pozycje i ID uchwytów
-              sourcePosition: sourcePos,
-              targetPosition: targetPos,
               sourceHandle: sourceHandle,
               targetHandle: targetHandle,
               
@@ -784,7 +771,7 @@ const TreeVisualizer = ({ projectId }: TreeVisualizerProps) => {
       
       axios.post(`${API_URL}/api/projects/${projectId}/save_layout/`, {
         positions: apiPositions
-      }).then(response => {
+      }).then(() => {
       }).catch(error => {
         console.error(`[onLayout] ❌ Failed to batch save positions to API:`, error)
         // Nie pokazuj błędu użytkownikowi - localStorage backup działa
@@ -813,7 +800,7 @@ const TreeVisualizer = ({ projectId }: TreeVisualizerProps) => {
       
       axios.post(`${API_URL}/api/projects/${projectId}/save_layout/`, {
         positions: apiPositions
-      }).then(response => {
+      }).then(() => {
       }).catch(error => {
         console.error(`[onLayout] ❌ Failed to batch save positions to API:`, error)
       })
@@ -870,8 +857,7 @@ const TreeVisualizer = ({ projectId }: TreeVisualizerProps) => {
         t.pdf
       )
       
-      if (result.success) {
-      } else {
+      if (!result.success) {
         console.error('PDF export failed:', result.error)
         alert(t.tree.failedToExportPDF)
       }
@@ -1013,7 +999,6 @@ const TreeVisualizer = ({ projectId }: TreeVisualizerProps) => {
     // Zapisz do historii tylko jeśli stan się zmienił
     if (isDifferent) {
       saveToHistory(positions)
-    } else {
     }
     
     // Zapisz do localStorage (zawsze, dla persystencji między sesjami)
@@ -1038,7 +1023,7 @@ const TreeVisualizer = ({ projectId }: TreeVisualizerProps) => {
     
     axios.post(`${API_URL}/api/projects/${projectId}/save_layout/`, {
       positions: apiPositions
-    }).then(response => {
+    }).then(() => {
       alert(t.tree.savedPositions.replace('{count}', String(nodes.length)))
     }).catch(error => {
       console.error(`[onSavePositions] ❌ Failed to batch save positions to API:`, error)
@@ -1075,7 +1060,6 @@ const TreeVisualizer = ({ projectId }: TreeVisualizerProps) => {
       nodesData: DecisionNode[],
       projectBudget: number,
       preservePositions: boolean = false,
-      existingNodes: Node[] = [],
       projectId: number = 0
     ): { nodes: Node[]; edges: Edge[]; nodeMap: Map<number, DecisionNode>; winningPath: Set<number> } => {
       const flowNodes: Node[] = []
@@ -1197,14 +1181,12 @@ const TreeVisualizer = ({ projectId }: TreeVisualizerProps) => {
         
         // ✅ NAPRAWA v1.28.1: ZAUFAJ DANYM Z BAZY - nie ograniczaj pozycji
         let x, y
-        let usedSavedPosition = false
         
         if (positionMap.has(nodeId)) {
           // Użyj pozycji z positionMap (z DB lub localStorage) - BEZ OGRANICZEŃ
           const pos = positionMap.get(nodeId)!
           x = pos.x
           y = pos.y
-          usedSavedPosition = true
         } else {
           // Domyślne pozycje dla nowych węzłów (bez zapisanych pozycji)
           x = level * 320 + 100
@@ -1224,8 +1206,7 @@ const TreeVisualizer = ({ projectId }: TreeVisualizerProps) => {
         const calculateAggregatedCost = (nodeId: number): number => {
           const children = Array.from(dataMap.values()).filter(n => n.parent === nodeId)
           if (children.length === 0) {
-            // Liść - zwróć własny koszt
-            return parseFloat(nodeData.estimated_cost) || 0
+            return parseFloat(dataMap.get(nodeId)?.estimated_cost ?? '0') || 0
           }
           
           // Znajdź wybrane dziecko (status === 'selected')
@@ -1292,7 +1273,7 @@ const TreeVisualizer = ({ projectId }: TreeVisualizerProps) => {
         return flowNode
       }
 
-      const processNode = (nodeData: DecisionNode, level: number, index: number, parentCollapsed: boolean = false) => {
+      const processNode = (nodeData: DecisionNode, level: number, index: number) => {
         // ✅ NAPRAWA v1.28.0 - PROBLEM 1: CAŁKOWITE USUWANIE ZAMIAST FLAGI HIDDEN
         // Sprawdź czy węzeł powinien być ukryty (którykolwiek przodek jest collapsed)
         const shouldBeHidden = isNodeHidden(nodeData)
@@ -1334,8 +1315,6 @@ const TreeVisualizer = ({ projectId }: TreeVisualizerProps) => {
           const isMainFlow = parentIsMilestone && childIsMilestone
           
           // ✅ UPROSZCZENIE v1.29.2.3: TYLKO połączenia pionowe (dół → góra)
-          const sourcePos = Position.Bottom
-          const targetPos = Position.Top
           const sourceHandle = 'bottom'
           const targetHandle = 'top'
 
@@ -1344,8 +1323,6 @@ const TreeVisualizer = ({ projectId }: TreeVisualizerProps) => {
             source: parentNode.id,
             target: flowNode.id,
             type: 'smoothstep', // ✅ Zawsze smoothstep
-            sourcePosition: sourcePos,
-            targetPosition: targetPos,
             sourceHandle: sourceHandle,  // ✅ DODANO: Konkretny uchwyt źródłowy
             targetHandle: targetHandle,  // ✅ DODANO: Konkretny uchwyt docelowy
             animated: isOnWinningPath,
@@ -1371,9 +1348,8 @@ const TreeVisualizer = ({ projectId }: TreeVisualizerProps) => {
         // Przetwórz dzieci tego węzła rekurencyjnie
 
         // Process children only if not collapsed
-        const isCollapsed = collapsedNodesRef.current.has(nodeData.id) // Użyj ref zamiast state
         nodeData.children.forEach((child, childIndex) => {
-          processNode(child, level + 1, index * 10 + childIndex, isCollapsed)
+          processNode(child, level + 1, index * 10 + childIndex)
         })
       }
 
@@ -1383,10 +1359,6 @@ const TreeVisualizer = ({ projectId }: TreeVisualizerProps) => {
         }
       })
       
-      // ✅ NAPRAWA: Log ile pozycji zostało załadowanych
-      const appliedPositions = flowNodes.filter(node => positionMap.has(node.id)).length
-      if (appliedPositions > 0) {
-      }
 
       return { nodes: flowNodes, edges: flowEdges, nodeMap: dataMap, winningPath: bestPath }
     },
@@ -1409,11 +1381,6 @@ const TreeVisualizer = ({ projectId }: TreeVisualizerProps) => {
       const response = await axios.get(`${API_URL}/api/projects/${projectId}/tree/`)
       const treeData = response.data
       
-      if (treeData.length > 0) {
-        if (treeData[0].children && treeData[0].children.length > 0) {
-        }
-      }
-
       if (Array.isArray(treeData) && treeData.length > 0) {
         const projectBudget = project ? parseFloat(project.budget_total) : 0
         
@@ -1462,7 +1429,6 @@ const TreeVisualizer = ({ projectId }: TreeVisualizerProps) => {
             setCollapsedNodes(rootNodesWithChildren)
             // ✅ Zaktualizuj ref NATYCHMIAST
             collapsedNodesRef.current = rootNodesWithChildren
-          } else {
           }
         } else if (hasManualLayout) {
           // ✅ Załaduj zapisany stan collapsed nodes z localStorage
@@ -1486,7 +1452,6 @@ const TreeVisualizer = ({ projectId }: TreeVisualizerProps) => {
           treeData,
           projectBudget,
           preservePositions,
-          nodesRef.current,
           projectId
         )
         
@@ -1570,6 +1535,12 @@ const TreeVisualizer = ({ projectId }: TreeVisualizerProps) => {
     }
   }, [projectId, fetchProject])
 
+  const initialLayoutRef = useRef<() => void>()
+  initialLayoutRef.current = () => {
+    onLayout()
+    forceCenterView()
+  }
+
   // Fetch tree only when projectId changes or project loads initially
   // Skip if we're just updating project metadata (like budget)
   useEffect(() => {
@@ -1579,6 +1550,9 @@ const TreeVisualizer = ({ projectId }: TreeVisualizerProps) => {
       // ✅ SAFETY LOCK v1.25.0: Wyłącz blokadę zapisu po 2 sekundach od załadowania
       setTimeout(() => {
         isInitialLoadRef.current = false
+        if (localStorage.getItem(`project-${projectId}-manual-layout`) !== 'true') {
+          initialLayoutRef.current?.()
+        }
       }, 2000)
     }
   }, [projectId, project, fetchTree, isUpdatingProjectMeta])
@@ -1654,8 +1628,7 @@ const TreeVisualizer = ({ projectId }: TreeVisualizerProps) => {
     if (loading) return
     
     // Reset flagi jeśli zmienił się projekt (zabezpieczenie)
-    if (!hasAutoLayoutedRef.current[projectId]) {
-    } else {
+    if (hasAutoLayoutedRef.current[projectId]) {
       // Jeśli już zrobiliśmy layout, nie robimy nic więcej
       return
     }
@@ -1692,7 +1665,7 @@ const TreeVisualizer = ({ projectId }: TreeVisualizerProps) => {
         saveToHistory(positions)
         
         window.requestAnimationFrame(() => {
-          const success = fitView({ 
+          fitView({ 
             padding: 0.5, 
             duration: 1000, 
             maxZoom: 0.25,
@@ -1861,10 +1834,6 @@ const TreeVisualizer = ({ projectId }: TreeVisualizerProps) => {
         type: 'smoothstep', // ✅ Ładny, łamany kształt
         sourceHandle: params.sourceHandle || 'bottom', // ✅ Konkretny uchwyt
         targetHandle: params.targetHandle || 'top',    // ✅ Konkretny uchwyt
-        sourcePosition: params.sourceHandle === 'left' || params.sourceHandle === 'left-source' ? Position.Left : 
-                       params.sourceHandle === 'right' ? Position.Right : Position.Bottom,
-        targetPosition: params.targetHandle === 'left' ? Position.Left :
-                       params.targetHandle === 'right' || params.targetHandle === 'right-target' ? Position.Right : Position.Top,
         animated: true,
         style: {
           strokeWidth: 6,
@@ -2422,9 +2391,9 @@ const TreeVisualizer = ({ projectId }: TreeVisualizerProps) => {
                 const message = t.tree.actionPlanGenerated
                   .replace('{count}', String(actionPlan.summary.optionsCount))
                   .replace('{cost}', formatCurrency(totalCost)) +
-                  `😊 Średnia radość: ${actionPlan.summary.avgJoy}/100\n` +
-                  `📈 Wykorzystanie budżetu: ${actionPlan.summary.budgetUsage}%\n\n` +
-                  `Plan został zapisany jako JSON`
+                  (language === 'pl'
+                    ? `😊 Średnia radość: ${actionPlan.summary.avgJoy}/100\n📈 Wykorzystanie budżetu: ${actionPlan.summary.budgetUsage}%\n\nPlan został zapisany jako JSON`
+                    : `😊 Average joy: ${actionPlan.summary.avgJoy}/100\n📈 Budget usage: ${actionPlan.summary.budgetUsage}%\n\nPlan saved as JSON`)
                 
                 alert(message)
               }}
@@ -2432,7 +2401,7 @@ const TreeVisualizer = ({ projectId }: TreeVisualizerProps) => {
               title="Generate action plan from selected options"
             >
               <FileDown className="w-4 h-4" />
-              Generuj Plan
+              {language === 'pl' ? 'Generuj Plan' : 'Action Plan'}
             </motion.button>
             
             {/* Auto-layout Button - DARK GLASS */}
@@ -2495,7 +2464,7 @@ const TreeVisualizer = ({ projectId }: TreeVisualizerProps) => {
               title="Save current positions"
             >
               <Save className="w-4 h-4" />
-              Zapisz
+              {language === 'pl' ? 'Zapisz' : 'Save'}
             </motion.button>
             
             {/* Undo Positions Button - DARK GLASS */}
@@ -2507,7 +2476,7 @@ const TreeVisualizer = ({ projectId }: TreeVisualizerProps) => {
               title="Restore last saved positions"
             >
               <Undo className="w-4 h-4" />
-              Cofnij
+              {language === 'pl' ? 'Cofnij' : 'Undo'}
             </motion.button>
             
             {/* Center View Button - DARK GLASS */}
@@ -2692,8 +2661,8 @@ const TreeVisualizer = ({ projectId }: TreeVisualizerProps) => {
             </svg>
           </div>
           <div>
-            <p className="font-semibold">Link skopiowany!</p>
-            <p className="text-sm text-emerald-100">Możesz go wysłać znajomym</p>
+            <p className="font-semibold">{language === 'pl' ? 'Link skopiowany!' : 'Link copied!'}</p>
+            <p className="text-sm text-emerald-100">{language === 'pl' ? 'Możesz go wysłać znajomym' : 'Share it with your team'}</p>
           </div>
         </motion.div>
       )}
