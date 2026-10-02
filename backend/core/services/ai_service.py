@@ -1,23 +1,106 @@
 import json
+import logging
 import os
-from typing import Any, Dict, List, Optional
+from typing import Any, Callable, Dict, List, Optional
 
 import google.generativeai as genai
 
+logger = logging.getLogger(__name__)
+
+DEFAULT_MODEL = 'models/gemini-2.5-flash'
+MAX_ATTEMPTS = 3
+SCORE_KEYS = ('score_comfort', 'score_risk', 'score_time', 'score_pleasure')
+OPTION_KEYS = ('title', 'description', 'estimated_cost', *SCORE_KEYS)
+
+
+def strip_code_fences(text: str) -> str:
+    text = text.strip()
+    if text.startswith('```json'):
+        return text.replace('```json', '').replace('```', '').strip()
+    if text.startswith('```'):
+        return text.replace('```', '').strip()
+    return text
+
+
+def _is_valid_option(option: Any) -> bool:
+    if not isinstance(option, dict) or not all(key in option for key in OPTION_KEYS):
+        return False
+    try:
+        float(option['estimated_cost'])
+        return all(0 <= int(option[key]) <= 100 for key in SCORE_KEYS)
+    except (ValueError, TypeError):
+        return False
+
+
+def validate_options(data: Any) -> bool:
+    return isinstance(data, list) and len(data) == 3 and all(_is_valid_option(o) for o in data)
+
+
+def validate_analysis(data: Any) -> bool:
+    if not isinstance(data, dict):
+        return False
+    if not all(key in data for key in ('summary', 'risks', 'missing_items', 'recommendations')):
+        return False
+    return all(isinstance(data[key], list) for key in ('risks', 'missing_items', 'recommendations'))
+
+
+def validate_suggestions(data: Any) -> bool:
+    required = ('action_type', 'reason', 'impact', 'changes')
+    return isinstance(data, list) and all(
+        isinstance(s, dict) and all(key in s for key in required) for s in data
+    )
+
+
+def validate_tasks(data: Any) -> bool:
+    return (
+        isinstance(data, dict)
+        and isinstance(data.get('tasks'), list)
+        and len(data['tasks']) > 0
+        and all(isinstance(t, str) and t.strip() for t in data['tasks'])
+    )
+
+
+def validate_project_structure(data: Any) -> bool:
+    return (
+        isinstance(data, dict)
+        and all(key in data for key in ('title', 'description', 'nodes'))
+        and isinstance(data['nodes'], list)
+    )
+
 
 class GeminiService:
-    def __init__(self):
-        self.api_key = os.getenv('GEMINI_API_KEY', None)
-        self.enabled = self.api_key is not None
-        
+    def __init__(self, api_key: Optional[str] = None, model_name: Optional[str] = None) -> None:
+        self.api_key = api_key or os.getenv('GEMINI_API_KEY')
+        self.enabled = bool(self.api_key)
+        self.model: Optional[genai.GenerativeModel] = None
+
         if self.enabled:
             genai.configure(api_key=self.api_key)
-            # Użyj models/gemini-2.5-flash (aktualnie dostępny model)
-            self.model = genai.GenerativeModel('models/gemini-2.5-flash')
-            self.model_json = self.model
-        else:
-            self.model = None
-            self.model_json = None
+            self.model = genai.GenerativeModel(model_name or os.getenv('GEMINI_MODEL', DEFAULT_MODEL))
+
+    def _generate_text(self, prompt: str, label: str) -> Optional[str]:
+        for attempt in range(1, MAX_ATTEMPTS + 1):
+            try:
+                return self.model.generate_content(prompt).text.strip()
+            except Exception:
+                logger.exception('Gemini call failed in %s (attempt %d/%d)', label, attempt, MAX_ATTEMPTS)
+        return None
+
+    def _generate_json(self, prompt: str, validator: Callable[[Any], bool], label: str) -> Optional[Any]:
+        for attempt in range(1, MAX_ATTEMPTS + 1):
+            try:
+                response_text = strip_code_fences(self.model.generate_content(prompt).text)
+                data = json.loads(response_text)
+            except json.JSONDecodeError as e:
+                logger.warning('Invalid JSON in %s (attempt %d/%d): %s', label, attempt, MAX_ATTEMPTS, e)
+                continue
+            except Exception:
+                logger.exception('Gemini call failed in %s (attempt %d/%d)', label, attempt, MAX_ATTEMPTS)
+                continue
+            if validator(data):
+                return data
+            logger.warning('Schema validation failed in %s (attempt %d/%d)', label, attempt, MAX_ATTEMPTS)
+        return None
 
     def generate_options(
         self,
@@ -80,64 +163,8 @@ Important:
 - Titles should be concise (max 50 characters)
 - Descriptions should be brief (max 200 characters)
 """
+        return self._generate_json(prompt, validate_options, 'generate_options')
 
-        # P1 FIX: Retry logic z lepszą obsługą błędów
-        for attempt in range(3):
-            try:
-                response = self.model_json.generate_content(prompt)
-                response_text = response.text.strip()
-                
-                # JSON mode powinien zwracać czysty JSON, ale na wszelki wypadek
-                if response_text.startswith('```json'):
-                    response_text = response_text.replace('```json', '').replace('```', '').strip()
-                elif response_text.startswith('```'):
-                    response_text = response_text.replace('```', '').strip()
-                
-                options = json.loads(response_text)
-                
-                # Walidacja struktury
-                if not isinstance(options, list) or len(options) != 3:
-                    if attempt < 2:
-                        continue
-                    return None
-                
-                # Walidacja każdej opcji
-                for option in options:
-                    required_keys = ['title', 'description', 'estimated_cost', 
-                                   'score_comfort', 'score_risk', 'score_time', 'score_pleasure']
-                    if not all(key in option for key in required_keys):
-                        if attempt < 2:
-                            continue
-                        return None
-                    try:
-                        float(option['estimated_cost'])
-                        # Walidacja scores (0-100)
-                        for score_key in ['score_comfort', 'score_risk', 'score_time', 'score_pleasure']:
-                            score = int(option[score_key])
-                            if score < 0 or score > 100:
-                                if attempt < 2:
-                                    continue
-                                return None
-                    except (ValueError, TypeError):
-                        if attempt < 2:
-                            continue
-                        return None
-                
-                return options
-                
-            except json.JSONDecodeError as e:
-                print(f"JSON decode error (attempt {attempt + 1}): {e}")
-                if attempt < 2:
-                    continue
-                return None
-            except Exception as e:
-                print(f"Error calling Gemini API (attempt {attempt + 1}): {e}")
-                if attempt < 2:
-                    continue
-                return None
-        
-        return None
-    
     def analyze_project(
         self,
         project_title: str,
@@ -145,9 +172,7 @@ Important:
         budget_total: float,
         tree_summary: str
     ) -> Optional[Dict[str, Any]]:
-        """
-        Analizuje projekt i zwraca strategiczne rady
-        """
+        """Return a strategic analysis: summary, risks, missing items and recommendations."""
         if not self.enabled:
             return None
 
@@ -201,48 +226,7 @@ Ważne:
 - Każda lista powinna mieć 3 elementy
 - Używaj konkretnych liczb ze scores w analizie
 """
-
-        for attempt in range(3):
-            try:
-                response = self.model.generate_content(prompt)
-                response_text = response.text.strip()
-                
-                # Usuń markdown jeśli jest
-                if response_text.startswith('```json'):
-                    response_text = response_text.replace('```json', '').replace('```', '').strip()
-                elif response_text.startswith('```'):
-                    response_text = response_text.replace('```', '').strip()
-                
-                analysis = json.loads(response_text)
-                
-                # Walidacja struktury
-                required_keys = ['summary', 'risks', 'missing_items', 'recommendations']
-                if not all(key in analysis for key in required_keys):
-                    if attempt < 2:
-                        continue
-                    return None
-                
-                # Walidacja że są listy
-                for key in ['risks', 'missing_items', 'recommendations']:
-                    if not isinstance(analysis[key], list):
-                        if attempt < 2:
-                            continue
-                        return None
-                
-                return analysis
-                
-            except json.JSONDecodeError as e:
-                print(f"JSON decode error in analyze_project (attempt {attempt + 1}): {e}")
-                if attempt < 2:
-                    continue
-                return None
-            except Exception as e:
-                print(f"Error calling Gemini API in analyze_project (attempt {attempt + 1}): {e}")
-                if attempt < 2:
-                    continue
-                return None
-        
-        return None
+        return self._generate_json(prompt, validate_analysis, 'analyze_project')
 
     def generate_actionable_suggestions(
         self,
@@ -251,9 +235,7 @@ Ważne:
         budget_total: float,
         tree_summary: str
     ) -> Optional[List[Dict[str, Any]]]:
-        """
-        Generuje konkretne propozycje zmian, które użytkownik może zatwierdzić
-        """
+        """Return machine-applicable change proposals for the decision tree."""
         if not self.enabled:
             return None
 
@@ -314,48 +296,7 @@ WAŻNE:
 - Maksymalnie 5 propozycji
 - Bazuj na rzeczywistych danych z tree_summary
 """
-
-        for attempt in range(3):
-            try:
-                response = self.model.generate_content(prompt)
-                response_text = response.text.strip()
-                
-                # Usuń markdown
-                if response_text.startswith('```json'):
-                    response_text = response_text.replace('```json', '').replace('```', '').strip()
-                elif response_text.startswith('```'):
-                    response_text = response_text.replace('```', '').strip()
-                
-                suggestions = json.loads(response_text)
-                
-                # Walidacja
-                if not isinstance(suggestions, list):
-                    if attempt < 2:
-                        continue
-                    return None
-                
-                # Walidacja każdej propozycji
-                for suggestion in suggestions:
-                    required_keys = ['action_type', 'reason', 'impact', 'changes']
-                    if not all(key in suggestion for key in required_keys):
-                        if attempt < 2:
-                            continue
-                        return None
-                
-                return suggestions
-                
-            except json.JSONDecodeError as e:
-                print(f"JSON decode error in generate_actionable_suggestions (attempt {attempt + 1}): {e}")
-                if attempt < 2:
-                    continue
-                return None
-            except Exception as e:
-                print(f"Error calling Gemini API in generate_actionable_suggestions (attempt {attempt + 1}): {e}")
-                if attempt < 2:
-                    continue
-                return None
-        
-        return None
+        return self._generate_json(prompt, validate_suggestions, 'generate_actionable_suggestions')
 
     def chat_with_project(
         self,
@@ -366,9 +307,7 @@ WAŻNE:
         chat_history: str,
         user_message: str
     ) -> Optional[str]:
-        """
-        Chat z AI o projekcie - ogólny asystent
-        """
+        """Free-form assistant reply grounded in the project tree and recent chat history."""
         if not self.enabled:
             return None
 
@@ -414,29 +353,14 @@ Czy chcesz zmienić kolejność któregoś z etapów?"
 
 Odpowiedz w języku polskim, konkretnie i pomocnie. Jeśli użytkownik prosi o dodanie czegoś, zasugeruj konkretne parametry (tytuł, sekcję, budżet, order).
 """
-
-        for attempt in range(3):
-            try:
-                response = self.model.generate_content(prompt)
-                response_text = response.text.strip()
-                return response_text
-                
-            except Exception as e:
-                print(f"Error calling Gemini API in chat_with_project (attempt {attempt + 1}): {e}")
-                if attempt < 2:
-                    continue
-                return None
-        
-        return None
+        return self._generate_text(prompt, 'chat_with_project')
 
     def build_project_from_notes(
         self,
         notes: str,
         budget_total: float
     ) -> Optional[Dict[str, Any]]:
-        """
-        Buduje cały projekt na podstawie notatek użytkownika
-        """
+        """Generate a full project (title, description, nested nodes) from free-text notes."""
         if not self.enabled:
             return None
 
@@ -520,100 +444,27 @@ PRZYKŁAD STRUKTURY:
 Odpowiedz TYLKO w formacie JSON (bez markdown, bez code blocks).
 Stwórz kompletną strukturę z minimum 3-5 głównych węzłów i opcjami dla każdego.
 """
+        return self._generate_json(prompt, validate_project_structure, 'build_project_from_notes')
 
-        for attempt in range(3):
-            try:
-                response = self.model.generate_content(prompt)
-                response_text = response.text.strip()
-                
-                # Usuń markdown
-                if response_text.startswith('```json'):
-                    response_text = response_text.replace('```json', '').replace('```', '').strip()
-                elif response_text.startswith('```'):
-                    response_text = response_text.replace('```', '').strip()
-                
-                project_structure = json.loads(response_text)
-                
-                # Walidacja
-                required_keys = ['title', 'description', 'nodes']
-                if not all(key in project_structure for key in required_keys):
-                    if attempt < 2:
-                        continue
-                    return None
-                
-                if not isinstance(project_structure['nodes'], list):
-                    if attempt < 2:
-                        continue
-                    return None
-                
-                return project_structure
-                
-            except json.JSONDecodeError as e:
-                print(f"JSON decode error in build_project_from_notes (attempt {attempt + 1}): {e}")
-                if attempt < 2:
-                    continue
-                return None
-            except Exception as e:
-                print(f"Error calling Gemini API in build_project_from_notes (attempt {attempt + 1}): {e}")
-                if attempt < 2:
-                    continue
-                return None
-        
-        return None
-        def generate_tasks_for_node(self, node_title: str, node_description: str) -> Optional[List[str]]:
-            """
-            Generuje listę zadań do wykonania dla wybranej decyzji
+    def generate_tasks_for_node(self, node_title: str, node_description: str) -> Optional[List[str]]:
+        """Break a selected decision down into 3-5 actionable tasks."""
+        if not self.enabled:
+            return None
 
-            Args:
-                node_title: Tytuł węzła decyzyjnego
-                node_description: Opis węzła
+        prompt = f"""Podano wybraną decyzję w projekcie:
+Tytuł: {node_title}
+Opis: {node_description}
 
-            Returns:
-                Lista zadań (strings) lub None w przypadku błędu
-            """
-            if not self.enabled:
-                return None
+Wygeneruj krótką, logiczną listę kroków (3-5 zadań), które trzeba wykonać, aby zrealizować tę decyzję.
+Zadania powinny być konkretne, wykonywalne i w logicznej kolejności.
 
-            prompt = f"""Podano wybraną decyzję w projekcie:
-    Tytuł: {node_title}
-    Opis: {node_description}
+Zwróć TYLKO czysty JSON w formacie:
+{{"tasks": ["zadanie 1", "zadanie 2", "zadanie 3"]}}
 
-    Wygeneruj krótką, logiczną listę kroków (3-5 zadań), które trzeba wykonać, aby zrealizować tę decyzję.
-    Zadania powinny być konkretne, wykonywalne i w logicznej kolejności.
+Nie dodawaj żadnych dodatkowych komentarzy ani formatowania."""
 
-    Zwróć TYLKO czysty JSON w formacie:
-    {{"tasks": ["zadanie 1", "zadanie 2", "zadanie 3"]}}
-
-    Nie dodawaj żadnych dodatkowych komentarzy ani formatowania."""
-
-            try:
-                response = self.model_json.generate_content(prompt)
-                response_text = response.text.strip()
-
-                # Usuń markdown code blocks jeśli są
-                if response_text.startswith('```'):
-                    lines = response_text.split('\n')
-                    response_text = '\n'.join(lines[1:-1])
-
-                # Parsuj JSON
-                data = json.loads(response_text)
-                tasks = data.get('tasks', [])
-
-                # Walidacja
-                if not isinstance(tasks, list) or len(tasks) == 0:
-                    return None
-
-                # Ogranicz do 5 zadań
-                return tasks[:5]
-
-            except json.JSONDecodeError as e:
-                print(f"JSON decode error in generate_tasks_for_node: {e}")
-                print(f"Response text: {response_text}")
-                return None
-            except Exception as e:
-                print(f"Error in generate_tasks_for_node: {e}")
-                return None
-
+        data = self._generate_json(prompt, validate_tasks, 'generate_tasks_for_node')
+        return data['tasks'][:5] if data else None
 
 
 ai_service = GeminiService()
