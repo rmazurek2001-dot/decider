@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react'
 import axios from 'axios'
 import { Save, Trash2, Plus, Sparkles, Heart, DollarSign, FileText, CheckCircle, XCircle, BarChart3, ListTodo, Loader, MessageCircle, Send } from 'lucide-react'
 import { useLanguage } from '../contexts/LanguageContext'
-import type { Task, Comment } from './TreeVisualizer'
+import type { Task, Comment } from '../types/tree'
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000'
 
@@ -64,7 +64,7 @@ const NodeSidebar = ({
   const [newCommentAuthor, setNewCommentAuthor] = useState('')
   const [newCommentContent, setNewCommentContent] = useState('')
   const [sendingComment, setSendingComment] = useState(false)
-  const { t } = useLanguage()
+  const { t, language, currency, formatCurrency } = useLanguage()
 
   useEffect(() => {
     const savedAuthor = localStorage.getItem('comment_author_name')
@@ -207,7 +207,8 @@ const NodeSidebar = ({
 
     try {
       const response = await axios.post(
-        `${API_URL}/api/decision-nodes/${node.id}/generate_subnodes/`
+        `${API_URL}/api/decision-nodes/${node.id}/generate_subnodes/`,
+        { language }
       )
 
       if (response.data.created_nodes) {
@@ -245,7 +246,8 @@ const NodeSidebar = ({
 
     try {
       const response = await axios.post(
-        `${API_URL}/api/decision-nodes/${node.id}/generate_tasks/`
+        `${API_URL}/api/decision-nodes/${node.id}/generate_tasks/`,
+        { language }
       )
 
       if (response.data.node) {
@@ -467,7 +469,7 @@ const NodeSidebar = ({
 
             <div>
               <label className="block text-sm font-medium text-slate-700 mb-2">
-                {t.node.estimatedCost} ($)
+                {t.node.estimatedCost} ({currency})
               </label>
               <input
                 type="number"
@@ -483,7 +485,7 @@ const NodeSidebar = ({
 
             <div>
               <label className="block text-sm font-medium text-slate-700 mb-2">
-                {t.node.actualCost} ($)
+                {t.node.actualCost} ({currency})
               </label>
               <input
                 type="number"
@@ -509,7 +511,7 @@ const NodeSidebar = ({
                           ? 'bg-red-50 text-red-700 border border-red-200' 
                           : 'bg-emerald-50 text-emerald-700 border border-emerald-200'
                       }`}>
-                        {isOverBudget ? '+' : ''}{difference.toFixed(2)} $ 
+                        {isOverBudget ? '+' : ''}{formatCurrency(difference.toFixed(2))} 
                         ({isOverBudget ? t.node.overBudget : t.node.savings})
                       </div>
                     )
@@ -662,7 +664,7 @@ const NodeSidebar = ({
                       setSuccess(null)
                     }, 1000)
                   } catch (err: any) {
-                    console.error('[Status Button] Failed to save status:', err)
+                    console.error('Failed to update node status:', err)
                     setError(err.response?.data?.error || t.node.failedToUpdateStatus)
                   } finally {
                     setLoading(false)
@@ -703,7 +705,7 @@ const NodeSidebar = ({
                       setSuccess(null)
                     }, 1000)
                   } catch (err: any) {
-                    console.error('[Status Button] Failed to save status:', err)
+                    console.error('Failed to update node status:', err)
                     setError(err.response?.data?.error || t.node.failedToUpdateStatus)
                   } finally {
                     setLoading(false)
@@ -745,7 +747,7 @@ const NodeSidebar = ({
                       setSuccess(null)
                     }, 1000)
                   } catch (err: any) {
-                    console.error('[Status Button] Failed to save status:', err)
+                    console.error('Failed to update node status:', err)
                     setError(err.response?.data?.error || t.node.failedToUpdateStatus)
                   } finally {
                     setLoading(false)
@@ -843,7 +845,7 @@ const NodeSidebar = ({
                           <button
                             onClick={() => handleDeleteTask(task.id)}
                             className="opacity-0 group-hover:opacity-100 text-red-500 hover:text-red-700 transition-all"
-                            aria-label="Delete task"
+                            aria-label={t.actionPlan.deleteTask}
                           >
                             <Trash2 className="w-3.5 h-3.5" />
                           </button>
@@ -978,12 +980,12 @@ const NodeSidebar = ({
                           </span>
                           <div className="flex items-center gap-2">
                             <span className="text-xs text-slate-400">
-                              {new Date(comment.created_at).toLocaleDateString()}
+                              {new Date(comment.created_at).toLocaleDateString(t.timeline.locale)}
                             </span>
                             <button
                               onClick={() => handleDeleteComment(comment.id)}
                               className="opacity-0 group-hover:opacity-100 text-red-500 hover:text-red-700 transition-all"
-                              aria-label="Delete comment"
+                              aria-label={t.comments.deleteComment}
                             >
                               <Trash2 className="w-3.5 h-3.5" />
                             </button>

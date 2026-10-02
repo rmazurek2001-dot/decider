@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react'
 import axios from 'axios'
 import { Calendar, CheckCircle, Clock, AlertCircle, Loader, MapPin } from 'lucide-react'
 import { useLanguage } from '../contexts/LanguageContext'
-import type { ProjectTask } from './TreeVisualizer'
+import type { ProjectTask } from '../types/tree'
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000'
 

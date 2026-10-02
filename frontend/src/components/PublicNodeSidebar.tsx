@@ -56,7 +56,7 @@ const PublicNodeSidebar = ({
       }
     } catch (err: any) {
       const errorMessage =
-        err.response?.data?.error || err.message || 'Failed to submit vote'
+        err.response?.data?.error || err.message || t.public.voteFailed
       setError(errorMessage)
     } finally {
       setLoading(false)
@@ -127,7 +127,7 @@ const PublicNodeSidebar = ({
           {success && (
             <div className="p-4 bg-emerald-50 border border-emerald-200 rounded-lg">
               <p className="text-sm text-emerald-600 font-medium">
-                ✓ Vote submitted successfully!
+                ✓ {t.public.voteSubmitted}
               </p>
             </div>
           )}
@@ -164,17 +164,17 @@ const PublicNodeSidebar = ({
                       d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
                     ></path>
                   </svg>
-                  Submitting...
+                  {t.public.submitting}
                 </>
               ) : success ? (
                 <>
                   <Heart className="w-5 h-5 fill-white text-white" />
-                  Voted!
+                  {t.public.votedExclaim}
                 </>
               ) : (
                 <>
                   <Heart className="w-5 h-5" />
-                  Vote for this option
+                  {t.public.voteForOption}
                 </>
               )}
             </button>

@@ -21,7 +21,7 @@ interface EditProjectModalProps {
 }
 
 const EditProjectModal = ({ isOpen, onClose, project, onProjectUpdated }: EditProjectModalProps) => {
-  const { t, language } = useLanguage()
+  const { t, currency } = useLanguage()
   const [formData, setFormData] = useState({
     title: project.title,
     description: project.description,
@@ -53,7 +53,7 @@ const EditProjectModal = ({ isOpen, onClose, project, onProjectUpdated }: EditPr
 
     const budgetNum = parseFloat(formData.budget_total)
     if (isNaN(budgetNum) || budgetNum < 0) {
-      setError(language === 'pl' ? 'Budżet musi być liczbą większą lub równą 0' : 'Budget must be a number greater than or equal to 0')
+      setError(t.editProject.invalidBudget)
       return
     }
 
@@ -73,13 +73,12 @@ const EditProjectModal = ({ isOpen, onClose, project, onProjectUpdated }: EditPr
       
       onProjectUpdated()
     } catch (err: any) {
-      console.error('[EditProjectModal] Error updating project:', err)
-      console.error('[EditProjectModal] Error response:', err.response?.data)
+      console.error('Failed to update project:', err.response?.data ?? err)
       
       let errorMessage = t.errors.failedToSave
       if (err.response?.data) {
         if (err.response.data.budget_total) {
-          errorMessage = `Budget: ${err.response.data.budget_total.join(', ')}`
+          errorMessage = `${t.common.budget}: ${err.response.data.budget_total.join(', ')}`
         } else if (err.response.data.detail) {
           errorMessage = err.response.data.detail
         } else if (typeof err.response.data === 'string') {
@@ -113,7 +112,7 @@ const EditProjectModal = ({ isOpen, onClose, project, onProjectUpdated }: EditPr
         >
           <div className="flex items-center justify-between p-6 border-b border-slate-200">
             <h2 className="text-2xl font-bold text-slate-900">
-              {language === 'pl' ? 'Edytuj Projekt' : 'Edit Project'}
+              {t.editProject.title}
             </h2>
             <button
               onClick={onClose}
@@ -167,8 +166,8 @@ const EditProjectModal = ({ isOpen, onClose, project, onProjectUpdated }: EditPr
                 {t.newProject.totalBudget}
               </label>
               <div className="relative">
-                <span className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-500 font-semibold">
-                  $
+                <span className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-500 font-semibold text-xs">
+                  {currency}
                 </span>
                 <input
                   type="number"
@@ -178,7 +177,7 @@ const EditProjectModal = ({ isOpen, onClose, project, onProjectUpdated }: EditPr
                   onChange={(e) => handleInputChange('budget_total', e.target.value)}
                   placeholder={t.newProject.budgetPlaceholder}
                   disabled={loading}
-                  className="w-full pl-8 pr-4 py-3 border border-slate-300 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all disabled:bg-slate-100 disabled:cursor-not-allowed"
+                  className="w-full pl-14 pr-4 py-3 border border-slate-300 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all disabled:bg-slate-100 disabled:cursor-not-allowed"
                 />
               </div>
             </div>
@@ -204,7 +203,7 @@ const EditProjectModal = ({ isOpen, onClose, project, onProjectUpdated }: EditPr
               {loading ? (
                 <>
                   <Loader className="w-4 h-4 animate-spin" />
-                  {language === 'pl' ? 'Zapisywanie...' : 'Saving...'}
+                  {t.editProject.saving}
                 </>
               ) : (
                 <>

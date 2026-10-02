@@ -10,6 +10,7 @@ import {
   Calendar,
   Users,
 } from 'lucide-react'
+import { useLanguage } from '../contexts/LanguageContext'
 
 interface DecisionNodeData {
   nodeId: number
@@ -45,6 +46,7 @@ const getCostBadgeColor = (cost: number) => {
 }
 
 const DecisionNodeComponent = ({ data }: NodeProps<DecisionNodeData>) => {
+  const { t, formatCurrency } = useLanguage()
   const cost = parseFloat(data.estimated_cost) || 0
   const costBadgeClass = getCostBadgeColor(cost)
 
@@ -85,12 +87,7 @@ const DecisionNodeComponent = ({ data }: NodeProps<DecisionNodeData>) => {
             >
               <div className="flex items-center gap-1">
                 <DollarSign className="w-3 h-3" />
-                {cost.toLocaleString('en-US', {
-                  style: 'currency',
-                  currency: 'USD',
-                  minimumFractionDigits: 0,
-                  maximumFractionDigits: 0,
-                })}
+                {formatCurrency(Math.round(cost))}
               </div>
             </div>
 
@@ -106,7 +103,7 @@ const DecisionNodeComponent = ({ data }: NodeProps<DecisionNodeData>) => {
             <div className="mt-2 pt-2 border-t border-rose-100">
               <div className="flex items-center gap-1.5 text-xs text-rose-600 font-medium">
                 <AlertTriangle className="w-3 h-3" />
-                Budget exceeded
+                {t.public.budgetExceeded}
               </div>
             </div>
           )}

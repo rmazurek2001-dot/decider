@@ -1,7 +1,9 @@
 import { useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { DollarSign, Heart, AlertCircle, ChevronDown, ChevronUp } from 'lucide-react'
+import { DollarSign, Heart, AlertCircle, ChevronDown, ChevronUp, SlidersHorizontal } from 'lucide-react'
 import { useLanguage } from '../contexts/LanguageContext'
+import type { CriteriaWeights, ScoreFields } from '../types/tree'
+import { averageWeightedScore } from '../utils/scoring'
 
 interface SelectedNode {
   nodeId: number
@@ -10,14 +12,16 @@ interface SelectedNode {
   joy: number
   risk: number
   section: string
+  scores?: ScoreFields
 }
 
 interface FloatingDashboardProps {
   selectedNodes: SelectedNode[]
   totalBudget: number
+  weights?: CriteriaWeights
 }
 
-const FloatingDashboard = ({ selectedNodes, totalBudget }: FloatingDashboardProps) => {
+const FloatingDashboard = ({ selectedNodes, totalBudget, weights }: FloatingDashboardProps) => {
   const [isExpanded, setIsExpanded] = useState(true)
   const { t, formatCurrency } = useLanguage()
   
@@ -26,6 +30,9 @@ const FloatingDashboard = ({ selectedNodes, totalBudget }: FloatingDashboardProp
   const totalCost = selectedNodes.reduce((sum, node) => sum + node.cost, 0)
   const avgJoy = selectedNodes.length > 0 ? selectedNodes.reduce((sum, node) => sum + node.joy, 0) / selectedNodes.length : 0
   const avgRisk = selectedNodes.length > 0 ? selectedNodes.reduce((sum, node) => sum + node.risk, 0) / selectedNodes.length : 0
+  const priorityScore = weights
+    ? averageWeightedScore(selectedNodes.map(node => node.scores ?? { score_pleasure: node.joy, score_risk: node.risk }), weights)
+    : null
   const remainingBudget = totalBudget - totalCost
   const budgetExceeded = remainingBudget < 0
 
@@ -35,6 +42,7 @@ const FloatingDashboard = ({ selectedNodes, totalBudget }: FloatingDashboardProp
       animate={{ opacity: 1, x: 0 }}
       exit={{ opacity: 0, x: 20 }}
       className="fixed md:top-[45%] md:-translate-y-1/2 md:right-6 bottom-0 left-0 right-0 md:left-auto md:bottom-auto bg-slate-900/95 backdrop-blur-xl border-t md:border border-white/20 md:rounded-2xl shadow-2xl z-40 md:max-w-xs"
+      data-testid="floating-dashboard"
     >
       <div 
         className="flex items-center justify-between p-3 md:p-4 cursor-pointer hover:bg-white/5 transition-colors md:rounded-t-2xl"
@@ -120,6 +128,15 @@ const FloatingDashboard = ({ selectedNodes, totalBudget }: FloatingDashboardProp
                   <div className="text-xs text-slate-400 mb-1">{t.floatingDashboard.risk}</div>
                   <div className="text-lg font-bold text-amber-400">{avgRisk.toFixed(0)}/100</div>
                 </div>
+                {priorityScore !== null && (
+                  <div className="col-span-2 bg-indigo-500/10 border border-indigo-400/20 rounded-lg p-3 flex items-center justify-between">
+                    <div className="text-xs text-slate-300 flex items-center gap-1">
+                      <SlidersHorizontal className="w-3 h-3" />
+                      {t.weights.priorityScore}
+                    </div>
+                    <div className="text-lg font-bold text-indigo-300" data-testid="priority-score">{priorityScore.toFixed(0)}/100</div>
+                  </div>
+                )}
               </div>
 
               <div className="max-h-32 overflow-y-auto space-y-2">

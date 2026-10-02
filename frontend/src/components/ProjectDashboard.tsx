@@ -125,7 +125,7 @@ const ProjectDashboard = () => {
             onClick={() => setIsModalOpen(true)}
             className="px-8 py-3 bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white font-semibold rounded-xl shadow-lg hover:shadow-xl transition-all"
           >
-            Create your first AI Project
+            {t.dashboard.createFirst}
           </motion.button>
         </motion.div>
       ) : (
@@ -154,7 +154,7 @@ const ProjectDashboard = () => {
                     </h3>
                     {project.share_token && (
                       <span className="px-2.5 py-1 bg-emerald-100 text-emerald-700 text-xs font-semibold rounded-full">
-                        Shared
+                        {t.dashboard.shared}
                       </span>
                     )}
                   </div>
@@ -182,14 +182,14 @@ const ProjectDashboard = () => {
                   <div className="flex items-center gap-2 text-xs text-slate-600">
                     <Calendar className="w-4 h-4" />
                     {project.created_at
-                      ? new Date(project.created_at).toLocaleDateString()
+                      ? new Date(project.created_at).toLocaleDateString(t.timeline.locale)
                       : t.common.recentlyCreated}
                   </div>
                   <motion.div
                     whileHover={{ x: 4 }}
                     className="text-indigo-600 font-semibold text-sm"
                   >
-                    Open →
+                    {t.dashboard.open} →
                   </motion.div>
                 </div>
               </motion.div>

@@ -38,7 +38,7 @@ const ProjectAdvisor = ({ projectId, isOpen, onClose, onSuggestionsApplied }: Pr
   const [suggestions, setSuggestions] = useState<Suggestion[]>([])
   const [loadingSuggestions, setLoadingSuggestions] = useState(false)
   const [applyingIndex, setApplyingIndex] = useState<number | null>(null)
-  const { t } = useLanguage()
+  const { t, language } = useLanguage()
 
   const handleAnalyze = async () => {
     setLoading(true)
@@ -46,7 +46,9 @@ const ProjectAdvisor = ({ projectId, isOpen, onClose, onSuggestionsApplied }: Pr
     setAnalysis(null)
 
     try {
-      const response = await axios.get(`${API_URL}/api/projects/${projectId}/analyze_project/`)
+      const response = await axios.get(`${API_URL}/api/projects/${projectId}/analyze_project/`, {
+        params: { language },
+      })
       setAnalysis(response.data)
       
       await handleGetSuggestions()
@@ -54,7 +56,7 @@ const ProjectAdvisor = ({ projectId, isOpen, onClose, onSuggestionsApplied }: Pr
       const errorMessage =
         err.response?.status === 503
           ? t.advisor.aiNotConfigured
-          : err.response?.data?.error || err.message || 'Failed to analyze project'
+          : err.response?.data?.error || err.message || t.advisor.failedToAnalyze
       setError(errorMessage)
     } finally {
       setLoading(false)
@@ -64,7 +66,9 @@ const ProjectAdvisor = ({ projectId, isOpen, onClose, onSuggestionsApplied }: Pr
   const handleGetSuggestions = async () => {
     setLoadingSuggestions(true)
     try {
-      const response = await axios.get(`${API_URL}/api/projects/${projectId}/get_suggestions/`)
+      const response = await axios.get(`${API_URL}/api/projects/${projectId}/get_suggestions/`, {
+        params: { language },
+      })
       setSuggestions(response.data)
     } catch (err: any) {
       console.error('Failed to get suggestions:', err)
@@ -91,8 +95,8 @@ const ProjectAdvisor = ({ projectId, isOpen, onClose, onSuggestionsApplied }: Pr
       }
     } catch (err: any) {
       console.error('Failed to apply suggestion:', err)
-      const errorMessage = err.response?.data?.error || 'Failed to apply suggestion'
-      alert(`Error: ${errorMessage}`)
+      const errorMessage = err.response?.data?.error || t.advisor.failedToApply
+      alert(`${t.common.error}: ${errorMessage}`)
     } finally {
       setApplyingIndex(null)
     }

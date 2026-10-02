@@ -256,8 +256,8 @@ export const exportProjectToPDF = async (
       pdf.text(costText, xPos, yPos)
       xPos += colWidths.cost
       
-      const statusText = node.status || 'pending'
-      pdf.text(statusText, xPos, yPos)
+      const statusKey = node.status === 'selected' || node.status === 'rejected' ? node.status : 'pending'
+      pdf.text(translations[statusKey], xPos, yPos)
       xPos += colWidths.status
       
       pdf.text(avgScore, xPos, yPos)

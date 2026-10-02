@@ -24,6 +24,7 @@ import {
   PublicProject,
   PublicDecisionNode,
 } from '../utils/publicApi'
+import { useLanguage } from '../contexts/LanguageContext'
 
 const nodeTypes = {
   custom: CustomNode,
@@ -46,6 +47,7 @@ const SharedProjectView = ({ token }: SharedProjectViewProps) => {
   const collapsedNodesRef = useRef<Set<number>>(new Set())
   const navigate = useNavigate()
   const { fitView, getNodes } = useReactFlow()
+  const { t, formatCurrency } = useLanguage()
 
   const buildTree = useCallback(
     (nodesData: PublicDecisionNode[], projectBudget: number) => {
@@ -250,7 +252,7 @@ const SharedProjectView = ({ token }: SharedProjectViewProps) => {
       }, 100)
     } catch (err: any) {
       console.error('Error fetching shared project:', err)
-      setError(err.response?.data?.error || 'Failed to load shared project')
+      setError(err.response?.data?.error || t.public.failedToLoadSharedProject)
     } finally {
       setLoading(false)
     }
@@ -296,7 +298,7 @@ const SharedProjectView = ({ token }: SharedProjectViewProps) => {
       <div className="flex items-center justify-center h-screen bg-gradient-to-br from-slate-50 to-slate-100">
         <div className="text-center">
           <div className="animate-spin rounded-full h-16 w-16 border-b-2 border-indigo-600 mx-auto mb-4"></div>
-          <p className="text-xl text-slate-700 font-medium">Loading shared project...</p>
+          <p className="text-xl text-slate-700 font-medium">{t.public.loadingSharedProject}</p>
         </div>
       </div>
     )
@@ -307,13 +309,13 @@ const SharedProjectView = ({ token }: SharedProjectViewProps) => {
       <div className="flex items-center justify-center h-screen bg-gradient-to-br from-slate-50 to-slate-100">
         <div className="text-center max-w-md">
           <div className="text-6xl mb-4">🔒</div>
-          <h1 className="text-2xl font-bold text-slate-900 mb-2">Project Not Found</h1>
+          <h1 className="text-2xl font-bold text-slate-900 mb-2">{t.public.projectNotFound}</h1>
           <p className="text-slate-600 mb-6">{error}</p>
           <button
             onClick={() => navigate('/')}
             className="px-6 py-3 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors font-medium"
           >
-            Go to Dashboard
+            {t.public.goToDashboard}
           </button>
         </div>
       </div>
@@ -330,7 +332,7 @@ const SharedProjectView = ({ token }: SharedProjectViewProps) => {
               <div className="flex-1 min-w-0">
                 <h1 className="text-sm md:text-lg font-bold text-slate-900 truncate">{project.title}</h1>
                 <p className="text-xs text-slate-500 mt-0.5 truncate">
-                  👁️ View-Only • ${parseFloat(project.budget_total).toLocaleString()}
+                  👁️ {t.public.viewOnly} • {formatCurrency(project.budget_total)}
                 </p>
               </div>
             </div>
@@ -341,8 +343,8 @@ const SharedProjectView = ({ token }: SharedProjectViewProps) => {
             className="group bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white px-4 md:px-6 py-3 md:py-4 rounded-2xl shadow-xl transition-all duration-300 hover:shadow-2xl hover:scale-105 flex items-center gap-2 md:gap-3 font-semibold text-sm md:text-base w-full md:w-auto justify-center"
           >
             <Sparkles className="w-4 h-4 md:w-5 md:h-5 group-hover:rotate-12 transition-transform" />
-            <span className="hidden md:inline">Build Your Own Plan Free</span>
-            <span className="md:hidden">Build Your Plan</span>
+            <span className="hidden md:inline">{t.public.buildYourOwnPlan}</span>
+            <span className="md:hidden">{t.public.buildYourPlan}</span>
             <ExternalLink className="w-3 h-3 md:w-4 md:h-4 opacity-75" />
           </button>
         </div>

@@ -1,8 +1,9 @@
 import { ReactNode } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
-import { LayoutGrid, FolderOpen, Settings, HelpCircle, LogOut } from 'lucide-react'
+import { LayoutGrid, FolderOpen, Activity, Settings, HelpCircle, LogOut } from 'lucide-react'
 import { motion } from 'framer-motion'
 import LanguageSwitcher from './LanguageSwitcher'
+import { useLanguage } from '../contexts/LanguageContext'
 
 interface AppShellProps {
   children: ReactNode
@@ -11,12 +12,14 @@ interface AppShellProps {
 const AppShell = ({ children }: AppShellProps) => {
   const location = useLocation()
   const navigate = useNavigate()
+  const { t } = useLanguage()
 
   const navItems = [
-    { icon: LayoutGrid, label: 'Dashboard', path: '/', id: 'dashboard' },
-    { icon: FolderOpen, label: 'Projects', path: '/projects', id: 'projects' },
-    { icon: Settings, label: 'Settings', path: '/settings', id: 'settings' },
-    { icon: HelpCircle, label: 'Help', path: '/help', id: 'help' },
+    { icon: LayoutGrid, label: t.nav.dashboard, path: '/', id: 'dashboard' },
+    { icon: FolderOpen, label: t.nav.projects, path: '/projects', id: 'projects' },
+    { icon: Activity, label: t.nav.observability, path: '/observability', id: 'observability' },
+    { icon: Settings, label: t.nav.settings, path: '/settings', id: 'settings' },
+    { icon: HelpCircle, label: t.nav.help, path: '/help', id: 'help' },
   ]
 
   const isActive = (path: string) => location.pathname === path
@@ -77,12 +80,12 @@ const AppShell = ({ children }: AppShellProps) => {
         <motion.button
           whileHover={{ scale: 1.1 }}
           whileTap={{ scale: 0.95 }}
-          className="w-12 h-12 rounded-xl flex items-center justify-center text-slate-400 hover:text-red-400 hover:bg-slate-800 transition-all duration-200 group"
-          title="Logout"
+          className="relative w-12 h-12 rounded-xl flex items-center justify-center text-slate-400 hover:text-red-400 hover:bg-slate-800 transition-all duration-200 group"
+          title={t.nav.logout}
         >
           <LogOut className="w-6 h-6" />
           <div className="absolute left-16 bg-slate-800 text-white text-xs font-medium px-3 py-1.5 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none whitespace-nowrap">
-            Logout
+            {t.nav.logout}
           </div>
         </motion.button>
       </motion.aside>

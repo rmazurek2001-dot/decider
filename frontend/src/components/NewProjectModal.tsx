@@ -29,6 +29,7 @@ const NewProjectModal = ({ isOpen, onClose, onProjectCreated }: NewProjectModalP
   })
   const [aiNotes, setAiNotes] = useState('')
   const [templates, setTemplates] = useState<Template[]>([])
+  const [templatesLanguage, setTemplatesLanguage] = useState<string | null>(null)
   const [selectedTemplate, setSelectedTemplate] = useState<Template | null>(null)
   const [templateFormData, setTemplateFormData] = useState({
     title: '',
@@ -36,19 +37,24 @@ const NewProjectModal = ({ isOpen, onClose, onProjectCreated }: NewProjectModalP
   })
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  const { t } = useLanguage()
+  const { t, language } = useLanguage()
   const navigate = useNavigate()
 
   useEffect(() => {
-    if (isOpen && mode === 'template' && templates.length === 0) {
+    if (isOpen && mode === 'template' && templatesLanguage !== language) {
       loadTemplates()
     }
-  }, [isOpen, mode])
+  }, [isOpen, mode, language])
 
   const loadTemplates = async () => {
     try {
-      const response = await axios.get(`${API_URL}/api/projects/templates/`)
-      setTemplates(response.data)
+      const response = await axios.get(`${API_URL}/api/projects/templates/`, {
+        params: { language },
+      })
+      const loaded: Template[] = response.data
+      setTemplates(loaded)
+      setTemplatesLanguage(language)
+      setSelectedTemplate((prev) => (prev ? loaded.find((tpl) => tpl.id === prev.id) ?? prev : prev))
     } catch (err) {
       console.error('Failed to load templates:', err)
     }
@@ -87,6 +93,7 @@ const NewProjectModal = ({ isOpen, onClose, onProjectCreated }: NewProjectModalP
         const response = await axios.post(`${API_URL}/api/projects/build_from_notes/`, {
           notes: aiNotes,
           budget_total: formData.budget_total || '10000.00',
+          language,
         })
         
         const projectId = response.data.id
@@ -107,6 +114,7 @@ const NewProjectModal = ({ isOpen, onClose, onProjectCreated }: NewProjectModalP
           template_id: selectedTemplate.id,
           title: templateFormData.title,
           budget_total: templateFormData.budget_total,
+          language,
         })
 
         const projectId = response.data.id
@@ -231,7 +239,6 @@ const NewProjectModal = ({ isOpen, onClose, onProjectCreated }: NewProjectModalP
                       onClick={() => {
                         setMode('template')
                         setError(null)
-                        if (templates.length === 0) loadTemplates()
                       }}
                       className={`flex-1 px-3 py-2 rounded-md font-medium transition-all flex items-center justify-center gap-2 text-sm ${
                         mode === 'template'

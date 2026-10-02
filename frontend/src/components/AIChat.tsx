@@ -24,7 +24,7 @@ const AIChat = ({ projectId }: AIChatProps) => {
   const [loading, setLoading] = useState(false)
   const [loadingHistory, setLoadingHistory] = useState(false)
   const messagesEndRef = useRef<HTMLDivElement>(null)
-  const { t } = useLanguage()
+  const { t, language } = useLanguage()
 
   useEffect(() => {
     if (isOpen && messages.length === 0) {
@@ -70,6 +70,7 @@ const AIChat = ({ projectId }: AIChatProps) => {
     try {
       const response = await axios.post(`${API_URL}/api/projects/${projectId}/chat/`, {
         message: userMessage,
+        language,
       })
 
       const assistantMessage: Message = {

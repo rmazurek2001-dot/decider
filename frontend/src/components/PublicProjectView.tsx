@@ -152,7 +152,7 @@ const PublicProjectView = ({ token }: PublicProjectViewProps) => {
       setProject(response.data)
     } catch (err: any) {
       console.error('Error fetching project:', err)
-      setError(err.response?.data?.error || 'Failed to load project')
+      setError(err.response?.data?.error || t.public.failedToLoadProject)
     }
   }, [token])
 
@@ -179,7 +179,7 @@ const PublicProjectView = ({ token }: PublicProjectViewProps) => {
       }
     } catch (err: any) {
       console.error('Error fetching tree:', err)
-      setError(err.response?.data?.error || 'Failed to load decision tree')
+      setError(err.response?.data?.error || t.public.failedToLoadTree)
     } finally {
       setLoading(false)
     }
@@ -261,14 +261,14 @@ const PublicProjectView = ({ token }: PublicProjectViewProps) => {
           <div className="absolute top-4 left-4 bg-white shadow-lg rounded-xl p-4 z-10 border border-indigo-200">
             <div className="text-sm font-semibold text-slate-900">{project.title}</div>
             <div className="text-xs text-slate-600 mt-1">
-              {t.public.viewOnly} • {t.tree.budget}: {formatCurrency(project.budget_total)}
+              {t.public.viewOnly} • {t.common.budget}: {formatCurrency(project.budget_total)}
             </div>
           </div>
           
           <div className="absolute top-4 left-1/2 -translate-x-1/2 bg-gradient-to-r from-amber-50 to-amber-100 border border-amber-300 rounded-lg px-4 py-2 z-10 shadow-md">
             <p className="text-sm text-amber-900 font-medium flex items-center gap-2">
               <span>👁️</span>
-              <span>View-only mode • Click nodes to vote</span>
+              <span>{t.public.viewOnlyHint}</span>
             </p>
           </div>
         </>

@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react'
 import axios from 'axios'
 import { X, CheckCircle, Calendar, Loader, ListTodo, TrendingUp } from 'lucide-react'
 import { useLanguage } from '../contexts/LanguageContext'
-import type { ProjectTask } from './TreeVisualizer'
+import type { ProjectTask } from '../types/tree'
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000'
 
@@ -283,7 +283,7 @@ const TaskItem = ({ task, onToggle, onUpdateDueDate }: TaskItemProps) => {
             </span>
             {task.node_section && task.node_section !== 'general' && (
               <span className="text-xs text-slate-500">
-                {task.node_section}
+                {t.sections[task.node_section as keyof typeof t.sections] || task.node_section}
               </span>
             )}
           </div>

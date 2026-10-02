@@ -4,7 +4,7 @@ import { Globe, DollarSign, ChevronDown } from 'lucide-react'
 import { useLanguage } from '../contexts/LanguageContext'
 
 const LanguageSwitcher = () => {
-  const { language, setLanguage, currency, setCurrency } = useLanguage()
+  const { t, language, setLanguage, currency, setCurrency } = useLanguage()
   const [showCurrencyMenu, setShowCurrencyMenu] = useState(false)
 
   const toggleLanguage = () => {
@@ -12,10 +12,10 @@ const LanguageSwitcher = () => {
   }
 
   const currencies = [
-    { code: 'USD', symbol: '$', name: 'US Dollar' },
-    { code: 'PLN', symbol: 'zł', name: 'Polski Złoty' },
-    { code: 'EUR', symbol: '€', name: 'Euro' },
-    { code: 'GBP', symbol: '£', name: 'British Pound' },
+    { code: 'USD', symbol: '$', name: t.languageSwitcher.currencyUSD },
+    { code: 'PLN', symbol: 'zł', name: t.languageSwitcher.currencyPLN },
+    { code: 'EUR', symbol: '€', name: t.languageSwitcher.currencyEUR },
+    { code: 'GBP', symbol: '£', name: t.languageSwitcher.currencyGBP },
   ] as const
 
   return (
@@ -25,7 +25,7 @@ const LanguageSwitcher = () => {
         whileTap={{ scale: 0.95 }}
         onClick={toggleLanguage}
         className="flex items-center gap-2 px-3 py-2 bg-white/80 hover:bg-white rounded-lg shadow-sm hover:shadow-md transition-all text-slate-700 font-medium text-sm"
-        title={`Switch to ${language === 'en' ? 'Polski' : 'English'}`}
+        title={t.languageSwitcher.switchTo.replace('{language}', language === 'en' ? 'Polski' : 'English')}
       >
         <Globe className="w-4 h-4" />
         <span className="uppercase font-bold">{language}</span>
@@ -37,7 +37,7 @@ const LanguageSwitcher = () => {
           whileTap={{ scale: 0.95 }}
           onClick={() => setShowCurrencyMenu(!showCurrencyMenu)}
           className="flex items-center gap-2 px-3 py-2 bg-white/80 hover:bg-white rounded-lg shadow-sm hover:shadow-md transition-all text-slate-700 font-medium text-sm"
-          title="Change currency"
+          title={t.languageSwitcher.changeCurrency}
         >
           <DollarSign className="w-4 h-4" />
           <span className="font-bold">{currency}</span>
