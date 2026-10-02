@@ -1,0 +1,22 @@
+[project]
+name = "decider-backend"
+version = "1.0.0"
+description = "Decider - AI Decision Engine (Django REST API + Gemini)"
+requires-python = ">=3.11"
+
+[tool.pytest.ini_options]
+DJANGO_SETTINGS_MODULE = "config.test_settings"
+python_files = ["test_*.py"]
+testpaths = ["core/tests"]
+
+[tool.ruff]
+line-length = 120
+target-version = "py311"
+extend-exclude = ["core/migrations"]
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B"]
+ignore = ["E501", "UP006", "UP035", "UP045", "B904"]
+
+[tool.ruff.lint.isort]
+known-first-party = ["config", "core"]
