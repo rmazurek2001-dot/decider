@@ -111,3 +111,16 @@ def test_public_view_by_share_token(client, project, root):
     response = client.get(f'/api/public/projects/{project.share_token}/tree/')
     assert response.status_code == 200
     assert response.data[0]['title'] == 'Venue'
+
+
+def test_analytics_counts_selected_decisions(client, project, root):
+    DecisionNode.objects.create(project=project, parent=root, title='Garden', estimated_cost=Decimal('300'),
+                                status='selected')
+    DecisionNode.objects.create(project=project, parent=root, title='Hall', estimated_cost=Decimal('200'),
+                                status='rejected')
+
+    data = client.get(f'/api/projects/{project.id}/analytics/').data
+
+    assert data['decisions_summary']['selected'] == 1
+    assert data['decisions_summary']['rejected'] == 1
+    assert data['budget_summary']['total_estimated'] == 300

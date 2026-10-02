@@ -626,12 +626,10 @@ class ProjectViewSet(viewsets.ModelViewSet):
         
         project = self.get_object()
         
-        # Pobierz tylko wybrane opcje (status='selected' i node_type='option')
         selected_options = DecisionNode.objects.filter(
             project=project,
-            status='selected',
-            node_type='option'
-        )
+            status='selected'
+        ).exclude(node_type='milestone')
         
         # 1. Budget Summary (Szacowane vs Rzeczywiste)
         total_estimated = Decimal('0')
@@ -693,7 +691,7 @@ class ProjectViewSet(viewsets.ModelViewSet):
         }
         
         # 5. Decisions Summary (Podsumowanie decyzji)
-        all_options = DecisionNode.objects.filter(project=project, node_type='option')
+        all_options = DecisionNode.objects.filter(project=project).exclude(node_type='milestone')
         decisions_summary = {
             'total_options': all_options.count(),
             'selected': all_options.filter(status='selected').count(),
