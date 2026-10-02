@@ -8,6 +8,15 @@
 
 **Decider turns messy, multi-step planning problems into an interactive decision tree, where an LLM generates scored options, audits the plan, and proposes changes you can apply in one click.**
 
+![Decision tree](docs/screenshots/decision-tree.png)
+
+<table>
+  <tr>
+    <td><img src="docs/screenshots/analytics.png" alt="Analytics dashboard"></td>
+    <td><img src="docs/screenshots/timeline.png" alt="Task timeline"></td>
+  </tr>
+</table>
+
 ---
 
 ## Problem Statement
@@ -94,7 +103,7 @@ flowchart LR
 | Data | PostgreSQL 16 (SQLite in tests) |
 | Frontend | React 18, TypeScript, Vite, React Flow, Dagre (auto-layout), Recharts, Tailwind CSS, Framer Motion |
 | Export | jsPDF + html2canvas (PDF reports) |
-| Quality | pytest + pytest-django (LLM mocked), Playwright E2E + visual regression, Ruff (lint + isort), GitHub Actions |
+| Quality | pytest + pytest-django (LLM mocked), Playwright E2E + visual regression, Ruff, ESLint, GitHub Actions |
 | Infra | Docker, Docker Compose |
 
 ## Quickstart
@@ -121,7 +130,7 @@ A Gemini API key is free at [Google AI Studio](https://aistudio.google.com/app/a
 python -m venv .venv
 source .venv/bin/activate        # Windows: .venv\Scripts\activate
 pip install -r backend/requirements-dev.txt
-cp .env.example .env             # set GEMINI_API_KEY; DB_HOST=localhost for a local Postgres
+cp .env.example .env             # set GEMINI_API_KEY; DB_ENGINE=sqlite to skip Postgres
 cd backend
 python manage.py migrate
 python manage.py runserver
