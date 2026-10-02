@@ -1,0 +1,120 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+body {
+  margin: 0;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
+    'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue',
+    sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+#root {
+  width: 100%;
+  height: 100vh;
+}
+
+@layer utilities {
+  .line-clamp-2 {
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+
+  .bg-radial-gradient {
+    background: radial-gradient(
+      circle at 50% 50%,
+      rgba(255, 255, 255, 0.8) 0%,
+      rgba(255, 255, 255, 0.4) 40%,
+      rgba(255, 255, 255, 0) 100%
+    );
+  }
+
+  .bg-mesh-gradient {
+    background: 
+      radial-gradient(circle at 20% 50%, rgba(99, 102, 241, 0.1) 0%, transparent 50%),
+      radial-gradient(circle at 80% 80%, rgba(168, 85, 247, 0.1) 0%, transparent 50%),
+      radial-gradient(circle at 40% 20%, rgba(59, 130, 246, 0.1) 0%, transparent 50%);
+  }
+}
+
+/* Smooth scrollbar styling */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgba(100, 116, 139, 0.3);
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(100, 116, 139, 0.5);
+}
+
+
+
+/* ✨ ReactFlow Edge Styling - Efekt hover i glow */
+.react-flow__edge-path {
+  transition: stroke-width 0.2s ease, stroke 0.2s ease, filter 0.2s ease;
+}
+
+/* Hover effect dla wszystkich linii */
+.react-flow__edge:hover .react-flow__edge-path {
+  stroke-width: 8 !important; /* Pogrubienie przy hoverze */
+  filter: drop-shadow(0 0 8px currentColor) !important;
+}
+
+/* Specjalny hover dla linii milestone (zielone) */
+.react-flow__edge:hover .react-flow__edge-path[stroke="#4ade80"] {
+  stroke: #86efac !important; /* Green-300 - jaśniejszy przy hoverze */
+  stroke-width: 20 !important;
+  filter: drop-shadow(0 0 12px rgba(74, 222, 128, 0.9)) !important;
+}
+
+/* Glow effect dla linii milestone (zawsze widoczny) */
+.react-flow__edge-path[stroke="#4ade80"] {
+  filter: drop-shadow(0 0 6px rgba(74, 222, 128, 0.6));
+}
+
+/* Animacja dla winning path */
+.react-flow__edge.animated .react-flow__edge-path {
+  stroke-dasharray: 5;
+  animation: dashdraw 0.5s linear infinite;
+}
+
+@keyframes dashdraw {
+  to {
+    stroke-dashoffset: -10;
+  }
+}
+
+/* Strzałki - lepszy kontrast */
+.react-flow__edge .react-flow__edge-textwrapper {
+  pointer-events: all;
+}
+
+/* Cursor pointer dla interaktywnych linii */
+.react-flow__edge {
+  cursor: pointer;
+}
+
+/* Smooth transitions dla wszystkich elementów ReactFlow */
+.react-flow__node {
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.react-flow__node:hover {
+  transform: scale(1.01);
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+}
