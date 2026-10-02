@@ -1,0 +1,170 @@
+[
+  {
+    "id": "options_wedding_venue",
+    "operation": "generate_options",
+    "language": "en",
+    "input": {
+      "parent_node_text": "Reception venue. Space for 120 guests within 30 miles of Austin, Texas, on a Saturday in late October.",
+      "project_context": "Project: Emma & Jake's Wedding. Mid-size wedding with ceremony and reception on the same day, rustic but elegant style.",
+      "budget_context": "Total budget: $32000.00. Already allocated: $11500.00. Remaining: $20500.00. Parent node cost: $0.00.",
+      "budget_remaining": 20500
+    },
+    "expect": {"required_keywords": [["guest"], ["venue", "barn", "estate", "ballroom", "hall", "ranch"]]}
+  },
+  {
+    "id": "options_city_break_lisbon",
+    "operation": "generate_options",
+    "language": "en",
+    "input": {
+      "parent_node_text": "Accommodation. 3 nights in central Lisbon for two adults in early May.",
+      "project_context": "Project: Lisbon Long Weekend. City break focused on food, viewpoints and a day trip to Sintra.",
+      "budget_context": "Total budget: $1800.00. Already allocated: $1150.00 (flights $640, food and activities $510). Remaining: $650.00. Parent node cost: $0.00.",
+      "budget_remaining": 650
+    },
+    "expect": {"required_keywords": [["night"], ["hotel", "guesthouse", "apartment", "hostel"]]}
+  },
+  {
+    "id": "options_bathroom_renovation_pl",
+    "operation": "generate_options",
+    "language": "pl",
+    "input": {
+      "parent_node_text": "Wykończenie łazienki. Łazienka 5 m² w bloku z lat 80., wymiana płytek, armatury i wanny na prysznic.",
+      "project_context": "Project: Remont mieszkania na Mokotowie. Odświeżenie 48-metrowego mieszkania przed wprowadzeniem się.",
+      "budget_context": "Total budget: $14000.00. Already allocated: $9800.00. Remaining: $4200.00. Parent node cost: $0.00.",
+      "budget_remaining": 4200
+    },
+    "expect": {"required_keywords": [["płyt"], ["prysznic", "kabin"]]}
+  },
+  {
+    "id": "options_product_launch_event",
+    "operation": "generate_options",
+    "language": "en",
+    "input": {
+      "parent_node_text": "Launch event format. Public launch of a B2B analytics SaaS product to about 200 qualified prospects and press.",
+      "project_context": "Project: Northwind Insights Launch. Go-to-market for a new product line; the goal is 40 sales demos booked within a month.",
+      "budget_context": "Total budget: $60000.00. Already allocated: $41000.00 (ads, PR agency, collateral). Remaining: $19000.00. Parent node cost: $0.00.",
+      "budget_remaining": 19000
+    },
+    "expect": {"required_keywords": [["demo"], ["webinar", "livestream", "virtual", "online", "venue", "event"]]}
+  },
+  {
+    "id": "options_tech_conference_av",
+    "operation": "generate_options",
+    "language": "en",
+    "input": {
+      "parent_node_text": "Audio-visual production. Two-day developer conference, 600 attendees, one main stage and two breakout rooms, all talks recorded.",
+      "project_context": "Project: DevSummit 2027. Regional developer conference in a convention center; sponsors expect high-quality recordings.",
+      "budget_context": "Total budget: $240000.00. Already allocated: $198000.00. Remaining: $42000.00. Parent node cost: $0.00.",
+      "budget_remaining": 42000
+    },
+    "expect": {"required_keywords": [["record", "stream"], ["stage"]]}
+  },
+  {
+    "id": "options_team_offsite_lodging_pl",
+    "operation": "generate_options",
+    "language": "pl",
+    "input": {
+      "parent_node_text": "Nocleg na wyjeździe integracyjnym. 25 osób, 2 noce w górach, potrzebna sala na warsztaty.",
+      "project_context": "Project: Offsite zespołu produktowego. Wyjazd integracyjno-strategiczny w Beskidy we wrześniu.",
+      "budget_context": "Total budget: $30000.00. Already allocated: $13500.00. Remaining: $16500.00. Parent node cost: $0.00.",
+      "budget_remaining": 16500
+    },
+    "expect": {"required_keywords": [["sal"], ["hotel", "pensjonat", "dom", "nocleg"]]}
+  },
+  {
+    "id": "options_relocation_movers",
+    "operation": "generate_options",
+    "language": "en",
+    "input": {
+      "parent_node_text": "Moving company. Relocating a furnished 2-bedroom apartment from Chicago to Denver (about 1,000 miles) in mid-June.",
+      "project_context": "Project: Move to Denver. Job relocation for a couple with a cat; the employer reimburses up to $5000 of moving costs.",
+      "budget_context": "Total budget: $9000.00. Already allocated: $2500.00 (deposit and first month of rent). Remaining: $6500.00. Parent node cost: $0.00.",
+      "budget_remaining": 6500
+    },
+    "expect": {"required_keywords": [["mover", "moving", "truck", "container"]]}
+  },
+  {
+    "id": "options_bakery_website",
+    "operation": "generate_options",
+    "language": "en",
+    "input": {
+      "parent_node_text": "Website build approach. Bakery website with menu, story page and online pre-orders for pickup.",
+      "project_context": "Project: Rise & Crumb Bakery Online. Small neighborhood bakery moving pre-orders from phone calls to the web.",
+      "budget_context": "Total budget: $6000.00. Already allocated: $1500.00 (photography, logo refresh). Remaining: $4500.00. Parent node cost: $0.00.",
+      "budget_remaining": 4500
+    },
+    "expect": {"required_keywords": [["order"], ["template", "custom", "shopify", "squarespace", "wordpress", "freelance", "agency"]]}
+  },
+  {
+    "id": "options_roofing_contractor",
+    "operation": "generate_options",
+    "language": "en",
+    "input": {
+      "parent_node_text": "Roofing contractor. Replace the asphalt shingle roof on a 1,800 sq ft ranch house, including tear-off and new underlayment.",
+      "project_context": "Project: Roof Replacement. 25-year-old roof with two active leaks; insurance will not cover wear and tear.",
+      "budget_context": "Total budget: $22000.00. Already allocated: $1200.00 (inspection, temporary tarp). Remaining: $20800.00. Parent node cost: $0.00.",
+      "budget_remaining": 20800
+    },
+    "expect": {"required_keywords": [["warranty"], ["shingle"]]}
+  },
+  {
+    "id": "options_kitchen_cabinets",
+    "operation": "generate_options",
+    "language": "en",
+    "input": {
+      "parent_node_text": "Kitchen cabinets. L-shaped kitchen with about 14 linear feet of base and wall cabinets, keeping the existing layout.",
+      "project_context": "Project: Kitchen Remodel. Mid-range remodel of a 1990s kitchen: cabinets, quartz counters, new appliances and lighting.",
+      "budget_context": "Total budget: $38000.00. Already allocated: $27000.00 (counters, appliances, electrical). Remaining: $11000.00. Parent node cost: $0.00.",
+      "budget_remaining": 11000
+    },
+    "expect": {"required_keywords": [["cabinet"]]}
+  },
+  {
+    "id": "options_family_orlando_activities",
+    "operation": "generate_options",
+    "language": "en",
+    "input": {
+      "parent_node_text": "Kids' activities. One week in Orlando with two kids aged 6 and 9; one theme-park day is already booked.",
+      "project_context": "Project: Orlando Family Vacation. Summer trip for a family of four, staying in a rental house with a pool.",
+      "budget_context": "Total budget: $7000.00. Already allocated: $4800.00 (flights, rental house, car, one park day). Remaining: $2200.00. Parent node cost: $0.00.",
+      "budget_remaining": 2200
+    },
+    "expect": {"required_keywords": [["kid", "children", "family"]]}
+  },
+  {
+    "id": "options_startup_mvp_team",
+    "operation": "generate_options",
+    "language": "en",
+    "input": {
+      "parent_node_text": "MVP development team. Two-sided marketplace MVP connecting dog owners with local walkers: web app plus iOS and Android.",
+      "project_context": "Project: Pawpath MVP. Pre-seed startup with 2 non-technical founders; the goal is a pilot in one city within 4 months.",
+      "budget_context": "Total budget: $60000.00. Already allocated: $15000.00 (design sprint, legal, cloud credits). Remaining: $45000.00. Parent node cost: $0.00.",
+      "budget_remaining": 45000
+    },
+    "expect": {"required_keywords": [["month", "week"]]}
+  },
+  {
+    "id": "options_charity_gala_catering",
+    "operation": "generate_options",
+    "language": "en",
+    "input": {
+      "parent_node_text": "Catering. Seated three-course dinner for 150 guests at a charity gala supporting a children's hospital.",
+      "project_context": "Project: Hope Gala 2026. Annual fundraising gala in a donated museum hall; the target is $120,000 raised.",
+      "budget_context": "Total budget: $40000.00. Already allocated: $31000.00 (AV, decor, auction platform, staff). Remaining: $9000.00. Parent node cost: $0.00.",
+      "budget_remaining": 9000
+    },
+    "expect": {"required_keywords": [["guest", "per person", "per head"]]}
+  },
+  {
+    "id": "options_student_trip_transport_pl",
+    "operation": "generate_options",
+    "language": "pl",
+    "input": {
+      "parent_node_text": "Transport do Budapesztu. 4 studentów jedzie z Krakowa na przedłużony weekend, wyjazd w czwartek po zajęciach.",
+      "project_context": "Project: Studencki weekend w Budapeszcie. Tani wyjazd na 4 dni, nocleg w hostelu jest już zarezerwowany.",
+      "budget_context": "Total budget: $2400.00. Already allocated: $1800.00 (hostel, jedzenie, termy). Remaining: $600.00. Parent node cost: $0.00.",
+      "budget_remaining": 600
+    },
+    "expect": {"required_keywords": [["bus", "pociąg", "samochód", "blablacar"]]}
+  }
+]
