@@ -1,16 +1,28 @@
-from decimal import Decimal
+import math
+from collections import defaultdict
+from datetime import datetime, timedelta
+from decimal import Decimal, InvalidOperation
+from typing import Any, Dict, List, Mapping, Optional, Sequence
 
 from django.core.cache import cache
+from django.db import transaction
+from django.db.models import Avg, Count
+from django.utils import timezone
 from rest_framework import permissions, status, viewsets
 from rest_framework.decorators import action, api_view
+from rest_framework.request import Request
 from rest_framework.response import Response
 
-from .models import ChatMessage, Comment, DecisionNode, Project, Task, Vote
+from core.llm.context import format_tree_summary, weighted_score
+from core.llm.schemas import Language
+
+from .models import ChatMessage, Comment, DecisionNode, LLMCall, Project, Task, Vote
 from .serializers import (
     ChatMessageSerializer,
     CommentSerializer,
     DecisionNodeCreateSerializer,
     DecisionNodeSerializer,
+    LLMCallSerializer,
     ProjectSerializer,
     ProjectTaskSerializer,
     PublicProjectSerializer,
@@ -18,6 +30,123 @@ from .serializers import (
 )
 from .services import template_service
 from .services.ai_service import ai_service
+from .services.fallbacks import fallback_analysis, fallback_suggestions
+
+SUPPORTED_LANGUAGES = ('en', 'pl')
+NODE_STATUSES = {choice for choice, _ in DecisionNode.STATUS_CHOICES}
+NODE_TYPES = {choice for choice, _ in DecisionNode.NODE_TYPE_CHOICES}
+SECTIONS = {choice for choice, _ in DecisionNode.SECTION_CHOICES}
+SUMMARY_FIELDS = (
+    'id', 'parent_id', 'title', 'description', 'estimated_cost', 'status', 'section', 'order', 'node_type',
+    'score_comfort', 'score_risk', 'score_time', 'score_pleasure',
+)
+AI_UNAVAILABLE = 'AI service is not configured. Please set GEMINI_API_KEY environment variable.'
+
+
+def request_language(request: Request) -> Language:
+    value = None
+    if request.method != 'GET' and isinstance(request.data, Mapping):
+        value = request.data.get('language')
+    if value is None:
+        value = request.query_params.get('language')
+    return value if value in SUPPORTED_LANGUAGES else 'en'
+
+
+def project_nodes(project: Project) -> List[Dict[str, Any]]:
+    rows = (
+        DecisionNode.objects.filter(project=project)
+        .annotate(vote_count=Count('votes'))
+        .order_by('order', 'created_at')
+        .values(*SUMMARY_FIELDS, 'vote_count')
+    )
+    nodes = []
+    for row in rows:
+        row['votes'] = row.pop('vote_count')
+        row['estimated_cost'] = float(row['estimated_cost'] or 0)
+        nodes.append(row)
+    return nodes
+
+
+def build_tree_summary(project: Project, nodes: Optional[Sequence[Mapping[str, Any]]] = None) -> str:
+    return format_tree_summary(
+        {'title': project.title, 'description': project.description, 'budget_total': float(project.budget_total)},
+        project_nodes(project) if nodes is None else nodes,
+        project.criteria_weights,
+    )
+
+
+def _ai_unavailable() -> Response:
+    return Response({'error': AI_UNAVAILABLE}, status=status.HTTP_503_SERVICE_UNAVAILABLE)
+
+
+def _money(value: Any) -> Decimal:
+    try:
+        return Decimal(str(value or 0)).quantize(Decimal('0.01'))
+    except (InvalidOperation, ValueError):
+        return Decimal('0.00')
+
+
+def _normalize_title(title: Any) -> str:
+    return str(title).strip().casefold() if title else ''
+
+
+def _attach_node_ids(suggestions: List[Dict[str, Any]], nodes: Sequence[Mapping[str, Any]]) -> List[Dict[str, Any]]:
+    ids_by_title: Dict[str, int] = {}
+    for node in nodes:
+        ids_by_title.setdefault(_normalize_title(node['title']), node['id'])
+    for suggestion in suggestions:
+        suggestion.setdefault('node_id', ids_by_title.get(_normalize_title(suggestion.get('node_title'))))
+        suggestion.setdefault('parent_id', ids_by_title.get(_normalize_title(suggestion.get('parent_title'))))
+    return suggestions
+
+
+def _node_id_by_title(project: Project, title: Any) -> Optional[int]:
+    if not _normalize_title(title):
+        return None
+    return (
+        DecisionNode.objects.filter(project=project, title__iexact=str(title).strip())
+        .values_list('id', flat=True)
+        .first()
+    )
+
+
+def _int_param(value: Any, default: int, low: int, high: int) -> int:
+    try:
+        number = int(value)
+    except (TypeError, ValueError):
+        number = default
+    return max(low, min(high, number))
+
+
+def _percentile(values: Sequence[float], q: float) -> int:
+    if not values:
+        return 0
+    ordered = sorted(values)
+    rank = (len(ordered) - 1) * q
+    low, high = math.floor(rank), math.ceil(rank)
+    return round(ordered[low] + (ordered[high] - ordered[low]) * (rank - low))
+
+
+def _call_stats(calls: Sequence[Mapping[str, Any]]) -> Dict[str, Any]:
+    count = len(calls)
+    latencies = [call['latency_ms'] for call in calls]
+    return {
+        'calls': count,
+        'success_rate': round(sum(1 for call in calls if call['success']) / count, 4) if count else 1.0,
+        'avg_attempts': round(sum(call['attempts'] for call in calls) / count, 2) if count else 1.0,
+        'input_tokens': sum(call['input_tokens'] for call in calls),
+        'output_tokens': sum(call['output_tokens'] for call in calls),
+        'cost_usd': round(sum(call['cost_usd'] for call in calls), 6),
+        'p50_latency_ms': _percentile(latencies, 0.5),
+        'p95_latency_ms': _percentile(latencies, 0.95),
+    }
+
+
+def _group_calls(calls: Sequence[Mapping[str, Any]], key: str) -> List[tuple]:
+    groups: Dict[str, List[Mapping[str, Any]]] = defaultdict(list)
+    for call in calls:
+        groups[call[key]].append(call)
+    return sorted(groups.items(), key=lambda item: (-len(item[1]), item[0]))
 
 
 class ProjectViewSet(viewsets.ModelViewSet):
@@ -30,270 +159,103 @@ class ProjectViewSet(viewsets.ModelViewSet):
         root_nodes = project.decision_nodes.filter(parent=None).prefetch_related('tasks', 'comments')
         serializer = DecisionNodeSerializer(root_nodes, many=True)
         return Response(serializer.data)
-    
+
     @action(detail=True, methods=['get'])
-    def analyze_project(self, request, pk=None):
-        """
-        AI Strategic Advisor - analizuje projekt i zwraca strategiczne rady
-        """
+    def analyze_project(self, request: Request, pk: Optional[str] = None) -> Response:
+        """Strategic AI analysis of the project, with a rule-based fallback."""
         project = self.get_object()
-        
         if not ai_service.enabled:
-            return Response(
-                {'error': 'AI service is not configured. Please set GEMINI_API_KEY environment variable.'},
-                status=status.HTTP_503_SERVICE_UNAVAILABLE
-            )
-        
-        all_nodes = DecisionNode.objects.filter(project=project).select_related('parent')
-        
-        tree_summary = self._build_tree_summary(project, all_nodes)
-        
+            return _ai_unavailable()
+
+        language = request_language(request)
+        nodes = project_nodes(project)
         analysis = ai_service.analyze_project(
             project_title=project.title,
             project_description=project.description,
             budget_total=float(project.budget_total),
-            tree_summary=tree_summary
+            tree_summary=build_tree_summary(project, nodes),
+            language=language,
+            project_id=project.id,
         )
-        
         if not analysis:
-            total_cost = sum(float(node.estimated_cost) for node in all_nodes)
-            budget_utilization = (total_cost / float(project.budget_total) * 100) if float(project.budget_total) > 0 else 0
-            
-            analysis = {
-                "summary": f"Projekt '{project.title}' zawiera {all_nodes.count()} węzłów decyzyjnych. Całkowity szacowany koszt wynosi ${total_cost:.2f}, co stanowi {budget_utilization:.1f}% budżetu (${project.budget_total}).",
-                "risks": [
-                    f"Wykorzystanie budżetu: {budget_utilization:.1f}% - {'przekroczenie' if budget_utilization > 100 else 'w normie'}",
-                    "Brak szczegółowej analizy AI - sprawdź konfigurację GEMINI_API_KEY",
-                    "Niektóre węzły mogą wymagać dodatkowych kosztów nieprzewidzianych"
-                ],
-                "missing_items": [
-                    "Bufor na nieprzewidziane wydatki (zalecane 10-15% budżetu)",
-                    "Szczegółowa analiza ryzyk dla każdego węzła",
-                    "Plan awaryjny w przypadku przekroczenia budżetu"
-                ],
-                "recommendations": [
-                    "Skonfiguruj GEMINI_API_KEY aby uzyskać pełną analizę AI",
-                    f"{'Zmniejsz koszty o ' + str(int(total_cost - float(project.budget_total))) + '$' if budget_utilization > 100 else 'Rozważ dodanie bufora bezpieczeństwa'}",
-                    "Regularnie aktualizuj koszty węzłów aby utrzymać dokładność budżetu"
-                ]
-            }
-        
+            analysis = fallback_analysis(project.title, nodes, float(project.budget_total), language)
         return Response(analysis, status=status.HTTP_200_OK)
-    
+
     @action(detail=True, methods=['get'])
-    def get_suggestions(self, request, pk=None):
-        """
-        AI Actionable Suggestions - generuje konkretne propozycje zmian
-        """
+    def get_suggestions(self, request: Request, pk: Optional[str] = None) -> Response:
+        """One-click change proposals for the decision tree, with a rule-based fallback."""
         project = self.get_object()
-        
         if not ai_service.enabled:
-            return Response(
-                {'error': 'AI service is not configured. Please set GEMINI_API_KEY environment variable.'},
-                status=status.HTTP_503_SERVICE_UNAVAILABLE
-            )
-        
-        all_nodes = DecisionNode.objects.filter(project=project).select_related('parent')
-        
-        tree_summary = self._build_tree_summary(project, all_nodes)
-        
+            return _ai_unavailable()
+
+        language = request_language(request)
+        nodes = project_nodes(project)
         suggestions = ai_service.generate_actionable_suggestions(
             project_title=project.title,
             project_description=project.description,
             budget_total=float(project.budget_total),
-            tree_summary=tree_summary
+            tree_summary=build_tree_summary(project, nodes),
+            language=language,
+            project_id=project.id,
         )
-        
         if not suggestions:
-            total_cost = sum(float(node.estimated_cost) for node in all_nodes)
-            budget_utilization = (total_cost / float(project.budget_total) * 100) if float(project.budget_total) > 0 else 0
-            
-            suggestions = []
-            
-            if budget_utilization > 100:
-                suggestions.append({
-                    "action_type": "update_node_status",
-                    "node_title": "Najdroższy węzeł",
-                    "node_id": None,
-                    "changes": {"status": "rejected"},
-                    "reason": f"Budżet przekroczony o {budget_utilization - 100:.1f}% - rozważ odrzucenie najdroższych opcji",
-                    "impact": "Zmniejszenie całkowitego kosztu projektu"
-                })
-            
-            suggestions.append({
-                "action_type": "add_buffer_node",
-                "parent_title": "Root",
-                "parent_id": None,
-                "changes": {
-                    "title": "Rezerwa budżetowa",
-                    "description": "Bufor na nieprzewidziane wydatki (15% budżetu)",
-                    "estimated_cost": str(float(project.budget_total) * 0.15),
-                    "score_comfort": 80,
-                    "score_risk": 20,
-                    "score_time": 90,
-                    "score_pleasure": 60
-                },
-                "reason": "Brak AI - skonfiguruj GEMINI_API_KEY aby uzyskać pełne propozycje",
-                "impact": "Zabezpieczenie przed przekroczeniem budżetu"
-            })
-        
-        return Response(suggestions, status=status.HTTP_200_OK)
-    
-    def _build_tree_summary(self, project, all_nodes):
-        """Zamienia strukturę drzewa na czytelny tekst dla AI"""
-        summary_lines = [
-            f"Project: {project.title}",
-            f"Description: {project.description or 'No description'}",
-            f"Total Budget: ${project.budget_total}",
-            f"Total Nodes: {all_nodes.count()}",
-            "",
-            "Decision Tree Structure:",
-        ]
-        
-        root_nodes = [node for node in all_nodes if node.parent is None]
-        
-        for root in root_nodes:
-            self._add_node_to_summary(root, all_nodes, summary_lines, level=0)
-        
-        total_cost = sum(float(node.estimated_cost) for node in all_nodes)
-        
-        avg_comfort = sum(node.score_comfort for node in all_nodes) / all_nodes.count() if all_nodes.count() > 0 else 0
-        avg_risk = sum(node.score_risk for node in all_nodes) / all_nodes.count() if all_nodes.count() > 0 else 0
-        avg_time = sum(node.score_time for node in all_nodes) / all_nodes.count() if all_nodes.count() > 0 else 0
-        avg_pleasure = sum(node.score_pleasure for node in all_nodes) / all_nodes.count() if all_nodes.count() > 0 else 0
-        
-        summary_lines.extend([
-            "",
-            f"Total Estimated Cost (all nodes): ${total_cost:.2f}",
-            f"Budget Utilization: {(total_cost / float(project.budget_total) * 100 if project.budget_total else 0):.1f}%",
-            "",
-            "Average Scores Across All Nodes:",
-            f"- Comfort: {avg_comfort:.1f}/100",
-            f"- Risk: {avg_risk:.1f}/100 (lower is better)",
-            f"- Time Efficiency: {avg_time:.1f}/100",
-            f"- Pleasure/Joy: {avg_pleasure:.1f}/100",
-        ])
-        
-        return "\n".join(summary_lines)
-    
-    def _add_node_to_summary(self, node, all_nodes, summary_lines, level):
-        """Rekurencyjnie dodaje węzeł i jego dzieci do summary"""
-        indent = "  " * level
-        vote_info = f" ({node.votes.count()} votes)" if node.votes.count() > 0 else ""
-        status_info = f" [STATUS: {node.status.upper()}]" if node.status != 'pending' else ""
-        scores_info = f" [Scores: C:{node.score_comfort} R:{node.score_risk} T:{node.score_time} J:{node.score_pleasure}]"
-        section_info = f" [Section: {node.section.upper()}]" if node.section != 'general' else ""
-        order_info = f" [Order: {node.order}]" if node.order > 0 else ""
-        
-        summary_lines.append(
-            f"{indent}- {node.title}: ${node.estimated_cost}{vote_info}{status_info}{scores_info}{section_info}{order_info}"
-        )
-        if node.description:
-            summary_lines.append(f"{indent}  Description: {node.description}")
-        
-        children = [n for n in all_nodes if n.parent_id == node.id]
-        for child in children:
-            self._add_node_to_summary(child, all_nodes, summary_lines, level + 1)
-    
+            suggestions = fallback_suggestions(nodes, float(project.budget_total), language)
+        return Response(_attach_node_ids(suggestions, nodes), status=status.HTTP_200_OK)
+
     @action(detail=True, methods=['post'])
-    def apply_suggestion(self, request, pk=None):
-        """
-        Aplikuje sugestię AI do projektu
-        """
+    def apply_suggestion(self, request: Request, pk: Optional[str] = None) -> Response:
         project = self.get_object()
         suggestion = request.data.get('suggestion')
-        
+
         if not suggestion:
             return Response(
                 {'error': 'No suggestion provided'},
                 status=status.HTTP_400_BAD_REQUEST
             )
-        
+
         action_type = suggestion.get('action_type') or suggestion.get('type')
-        
+        changes = suggestion.get('changes') or {}
+
         try:
-            if action_type == 'update_node_status':
-                node_id = suggestion.get('node_id')
+            if action_type in ('update_node_status', 'update_node_scores', 'update_node_cost'):
+                node_id = suggestion.get('node_id') or _node_id_by_title(project, suggestion.get('node_title'))
                 if not node_id:
                     return Response(
-                        {'error': 'node_id is required for update_node_status'},
+                        {'error': f'node_id is required for {action_type}'},
                         status=status.HTTP_400_BAD_REQUEST
                     )
-                
                 node = DecisionNode.objects.get(id=node_id, project=project)
-                changes = suggestion.get('changes', {})
-                
-                if 'status' in changes:
-                    node.status = changes['status']
+
+                if action_type == 'update_node_status':
+                    if 'status' in changes:
+                        if changes['status'] not in NODE_STATUSES:
+                            return Response(
+                                {'error': f"Invalid status: {changes['status']}"},
+                                status=status.HTTP_400_BAD_REQUEST
+                            )
+                        node.status = changes['status']
+                    message = f'Node status updated to {node.status}'
+                elif action_type == 'update_node_scores':
+                    for field in ('score_comfort', 'score_risk', 'score_time', 'score_pleasure'):
+                        if field in changes:
+                            setattr(node, field, changes[field])
+                    message = 'Node scores updated successfully'
+                else:
+                    if 'estimated_cost' in changes:
+                        node.estimated_cost = Decimal(str(changes['estimated_cost']))
+                    message = f'Node cost updated to {node.estimated_cost}'
+
                 node.save()
-                
-                serializer = DecisionNodeSerializer(node)
                 return Response({
                     'success': True,
-                    'message': f'Node status updated to {node.status}',
-                    'updated_node': serializer.data
+                    'message': message,
+                    'updated_node': DecisionNodeSerializer(node).data
                 }, status=status.HTTP_200_OK)
-            
-            elif action_type == 'update_node_scores':
-                node_id = suggestion.get('node_id')
-                if not node_id:
-                    return Response(
-                        {'error': 'node_id is required for update_node_scores'},
-                        status=status.HTTP_400_BAD_REQUEST
-                    )
-                
-                node = DecisionNode.objects.get(id=node_id, project=project)
-                changes = suggestion.get('changes', {})
-                
-                if 'score_comfort' in changes:
-                    node.score_comfort = changes['score_comfort']
-                if 'score_risk' in changes:
-                    node.score_risk = changes['score_risk']
-                if 'score_time' in changes:
-                    node.score_time = changes['score_time']
-                if 'score_pleasure' in changes:
-                    node.score_pleasure = changes['score_pleasure']
-                
-                node.save()
-                
-                serializer = DecisionNodeSerializer(node)
-                return Response({
-                    'success': True,
-                    'message': 'Node scores updated successfully',
-                    'updated_node': serializer.data
-                }, status=status.HTTP_200_OK)
-            
-            elif action_type == 'update_node_cost':
-                node_id = suggestion.get('node_id')
-                if not node_id:
-                    return Response(
-                        {'error': 'node_id is required for update_node_cost'},
-                        status=status.HTTP_400_BAD_REQUEST
-                    )
-                
-                node = DecisionNode.objects.get(id=node_id, project=project)
-                changes = suggestion.get('changes', {})
-                
-                if 'estimated_cost' in changes:
-                    node.estimated_cost = Decimal(str(changes['estimated_cost']))
-                
-                node.save()
-                
-                serializer = DecisionNodeSerializer(node)
-                return Response({
-                    'success': True,
-                    'message': f'Node cost updated to {node.estimated_cost}',
-                    'updated_node': serializer.data
-                }, status=status.HTTP_200_OK)
-            
-            elif action_type == 'add_buffer_node':
-                parent_id = suggestion.get('parent_id')
-                changes = suggestion.get('changes', {})
-                
-                parent = None
-                if parent_id:
-                    parent = DecisionNode.objects.get(id=parent_id, project=project)
-                
+
+            if action_type == 'add_buffer_node':
+                parent_id = suggestion.get('parent_id') or _node_id_by_title(project, suggestion.get('parent_title'))
+                parent = DecisionNode.objects.get(id=parent_id, project=project) if parent_id else None
+
                 new_node = DecisionNode.objects.create(
                     project=project,
                     parent=parent,
@@ -308,20 +270,17 @@ class ProjectViewSet(viewsets.ModelViewSet):
                     order=changes.get('order', 0),
                     node_type=changes.get('node_type', 'decision')
                 )
-                
-                serializer = DecisionNodeSerializer(new_node)
                 return Response({
                     'success': True,
                     'message': f'New node "{new_node.title}" created successfully',
-                    'created_node': serializer.data
+                    'created_node': DecisionNodeSerializer(new_node).data
                 }, status=status.HTTP_201_CREATED)
-            
-            else:
-                return Response(
-                    {'error': f'Unknown action type: {action_type}'},
-                    status=status.HTTP_400_BAD_REQUEST
-                )
-        
+
+            return Response(
+                {'error': f'Unknown action type: {action_type}'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
         except DecisionNode.DoesNotExist:
             return Response(
                 {'error': 'Node not found'},
@@ -332,155 +291,126 @@ class ProjectViewSet(viewsets.ModelViewSet):
                 {'error': str(e)},
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR
             )
-    
+
     @action(detail=True, methods=['get', 'post'])
-    def chat(self, request, pk=None):
-        """
-        AI Chat Assistant - ogólny chat do zarządzania projektem
-        GET: Pobierz historię chatu
-        POST: Wyślij wiadomość i otrzymaj odpowiedź AI
-        """
+    def chat(self, request: Request, pk: Optional[str] = None) -> Response:
+        """GET returns the chat history; POST sends a message and returns the assistant reply."""
         project = self.get_object()
-        
+
         if request.method == 'GET':
             messages = ChatMessage.objects.filter(project=project)
             serializer = ChatMessageSerializer(messages, many=True)
             return Response(serializer.data)
-        
-        elif request.method == 'POST':
-            user_message = request.data.get('message', '')
-            
-            if not user_message:
-                return Response(
-                    {'error': 'Message is required'},
-                    status=status.HTTP_400_BAD_REQUEST
-                )
-            
-            if not ai_service.enabled:
-                return Response(
-                    {'error': 'AI service is not configured. Please set GEMINI_API_KEY environment variable.'},
-                    status=status.HTTP_503_SERVICE_UNAVAILABLE
-                )
-            
-            ChatMessage.objects.create(
-                project=project,
-                role='user',
-                content=user_message
+
+        user_message = request.data.get('message', '')
+        if not user_message:
+            return Response(
+                {'error': 'Message is required'},
+                status=status.HTTP_400_BAD_REQUEST
             )
-            
-            all_nodes = DecisionNode.objects.filter(project=project).select_related('parent')
-            tree_summary = self._build_tree_summary(project, all_nodes)
-            
-            recent_messages = ChatMessage.objects.filter(project=project).order_by('-created_at')[:10]
-            chat_history = "\n".join([
-                f"{msg.role.upper()}: {msg.content}"
-                for msg in reversed(recent_messages)
-            ])
-            
-            ai_response = ai_service.chat_with_project(
-                project_title=project.title,
-                project_description=project.description,
-                budget_total=float(project.budget_total),
-                tree_summary=tree_summary,
-                chat_history=chat_history,
-                user_message=user_message
+        if not ai_service.enabled:
+            return _ai_unavailable()
+
+        recent_messages = list(ChatMessage.objects.filter(project=project).order_by('-created_at')[:10])
+        chat_history = '\n'.join(f'{msg.role.upper()}: {msg.content}' for msg in reversed(recent_messages))
+        ChatMessage.objects.create(project=project, role='user', content=user_message)
+
+        ai_response = ai_service.chat_with_project(
+            project_title=project.title,
+            project_description=project.description,
+            budget_total=float(project.budget_total),
+            tree_summary=build_tree_summary(project),
+            chat_history=chat_history,
+            user_message=user_message,
+            language=request_language(request),
+            project_id=project.id,
+        )
+        if not ai_response:
+            return Response(
+                {'error': 'Failed to get AI response. Please try again.'},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
             )
-            
-            if not ai_response:
-                return Response(
-                    {'error': 'Failed to get AI response. Please try again.'},
-                    status=status.HTTP_500_INTERNAL_SERVER_ERROR
-                )
-            
-            assistant_message = ChatMessage.objects.create(
-                project=project,
-                role='assistant',
-                content=ai_response
-            )
-            
-            return Response({
-                'user_message': user_message,
-                'assistant_message': ai_response,
-                'message_id': assistant_message.id
-            })
-    
+
+        assistant_message = ChatMessage.objects.create(project=project, role='assistant', content=ai_response)
+        return Response({
+            'user_message': user_message,
+            'assistant_message': ai_response,
+            'message_id': assistant_message.id
+        })
+
     @action(detail=False, methods=['post'])
-    def build_from_notes(self, request):
-        """
-        AI Project Builder - buduje cały projekt na podstawie notatek
-        POST: { "notes": "...", "budget_total": 5000 }
-        """
+    def build_from_notes(self, request: Request) -> Response:
+        """Create a project with milestones and options from free-text notes."""
         notes = request.data.get('notes', '')
-        budget_total = float(request.data.get('budget_total', 10000))
-        
         if not notes:
             return Response(
                 {'error': 'Notes are required'},
                 status=status.HTTP_400_BAD_REQUEST
             )
-        
-        if not ai_service.enabled:
+        try:
+            budget_total = float(request.data.get('budget_total', 10000))
+        except (TypeError, ValueError):
             return Response(
-                {'error': 'AI service is not configured. Please set GEMINI_API_KEY environment variable.'},
-                status=status.HTTP_503_SERVICE_UNAVAILABLE
+                {'error': 'Invalid budget_total value'},
+                status=status.HTTP_400_BAD_REQUEST
             )
-        
-        project_structure = ai_service.build_project_from_notes(
+        if not ai_service.enabled:
+            return _ai_unavailable()
+
+        structure = ai_service.build_project_from_notes(
             notes=notes,
-            budget_total=budget_total
+            budget_total=budget_total,
+            language=request_language(request),
+            project_id=None,
         )
-        
-        if not project_structure:
+        if not structure:
             return Response(
                 {'error': 'Failed to build project from notes. Please try again.'},
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR
             )
-        
-        project = Project.objects.create(
-            title=project_structure['title'],
-            description=project_structure['description'],
-            budget_total=budget_total
-        )
-        
-        def create_nodes(nodes_data, parent=None, current_order=0):
-            for node_data in nodes_data:
-                node = DecisionNode.objects.create(
-                    project=project,
-                    parent=parent,
-                    title=node_data['title'],
-                    description=node_data.get('description', ''),
-                    estimated_cost=node_data.get('estimated_cost', '0'),
-                    section=node_data.get('section', 'general'),
-                    order=node_data.get('order', current_order),
-                    score_comfort=node_data.get('score_comfort', 50),
-                    score_risk=node_data.get('score_risk', 50),
-                    score_time=node_data.get('score_time', 50),
-                    score_pleasure=node_data.get('score_pleasure', 50),
-                    status='pending'
-                )
-                
-                if 'children' in node_data and node_data['children']:
-                    create_nodes(node_data['children'], parent=node, current_order=current_order)
-        
-        create_nodes(project_structure['nodes'])
-        
+
+        with transaction.atomic():
+            project = Project.objects.create(
+                title=structure['title'][:200],
+                description=structure.get('description', ''),
+                budget_total=_money(budget_total)
+            )
+            self._create_ai_nodes(project, structure.get('nodes', []))
+
         serializer = ProjectSerializer(project)
         return Response(serializer.data, status=status.HTTP_201_CREATED)
+
+    @staticmethod
+    def _create_ai_nodes(project: Project, nodes_data: Sequence[Mapping[str, Any]],
+                         parent: Optional[DecisionNode] = None) -> None:
+        for node_data in nodes_data:
+            node_type = node_data.get('node_type')
+            section = node_data.get('section')
+            node = DecisionNode.objects.create(
+                project=project,
+                parent=parent,
+                title=str(node_data['title'])[:200],
+                description=node_data.get('description', ''),
+                estimated_cost=_money(node_data.get('estimated_cost')),
+                node_type=node_type if node_type in NODE_TYPES else 'decision',
+                section=section if section in SECTIONS else 'general',
+                order=int(node_data.get('order') or 0),
+                score_comfort=int(node_data.get('score_comfort', 50)),
+                score_risk=int(node_data.get('score_risk', 50)),
+                score_time=int(node_data.get('score_time', 50)),
+                score_pleasure=int(node_data.get('score_pleasure', 50)),
+                status='pending'
+            )
+            ProjectViewSet._create_ai_nodes(project, node_data.get('children') or [], parent=node)
+
     @action(detail=False, methods=['get'])
-    def templates(self, request):
-        """
-        Zwraca listę dostępnych szablonów projektów
-        GET: /api/projects/templates/
-        """
-        templates = template_service.get_all_templates()
+    def templates(self, request: Request) -> Response:
+        templates = template_service.get_all_templates(language=request_language(request))
         return Response(templates, status=status.HTTP_200_OK)
 
     @action(detail=False, methods=['post'])
-    def create_from_template(self, request):
-        """
-        Tworzy projekt na podstawie szablonu
-        POST: { "template_id": "wedding", "title": "Moje Wesele", "budget_total": 50000 }
-        """
+    def create_from_template(self, request: Request) -> Response:
+        """Create a project from a template: {"template_id", "title", "budget_total", "language"}."""
         template_id = request.data.get('template_id')
         title = request.data.get('title', '')
         budget_total = request.data.get('budget_total')
@@ -497,7 +427,7 @@ class ProjectViewSet(viewsets.ModelViewSet):
                 status=status.HTTP_400_BAD_REQUEST
             )
 
-        template = template_service.get_template(template_id)
+        template = template_service.get_template(template_id, language=request_language(request))
         if not template:
             return Response(
                 {'error': f'Template "{template_id}" not found'},
@@ -508,7 +438,7 @@ class ProjectViewSet(viewsets.ModelViewSet):
 
         try:
             budget_decimal = Decimal(str(budget_total))
-        except (ValueError, TypeError):
+        except (InvalidOperation, ValueError, TypeError):
             return Response(
                 {'error': 'Invalid budget_total value'},
                 status=status.HTTP_400_BAD_REQUEST
@@ -550,23 +480,20 @@ class ProjectViewSet(viewsets.ModelViewSet):
         return Response(serializer.data, status=status.HTTP_201_CREATED)
 
     @action(detail=True, methods=['get'])
-    def get_all_tasks(self, request, pk=None):
-        """
-        Pobiera wszystkie zadania dla danego projektu (Global Action Board)
-        GET: /api/projects/{id}/get_all_tasks/
-        """
+    def get_all_tasks(self, request: Request, pk: Optional[str] = None) -> Response:
+        """All tasks of the project with completion stats."""
         project = self.get_object()
-        
+
         tasks = Task.objects.filter(
             node__project=project
         ).select_related('node').order_by('due_date', 'created_at')
-        
+
         serializer = ProjectTaskSerializer(tasks, many=True)
-        
+
         total_tasks = tasks.count()
         completed_tasks = tasks.filter(is_completed=True).count()
         completion_percentage = (completed_tasks / total_tasks * 100) if total_tasks > 0 else 0
-        
+
         return Response({
             'tasks': serializer.data,
             'stats': {
@@ -576,77 +503,78 @@ class ProjectViewSet(viewsets.ModelViewSet):
                 'completion_percentage': round(completion_percentage, 1)
             }
         }, status=status.HTTP_200_OK)
-    
+
     @action(detail=True, methods=['get'])
-    def analytics(self, request, pk=None):
-        """
-        Zwraca zagregowane dane analityczne dla projektu
-        GET: /api/projects/{id}/analytics/
-        """
-        from django.db.models import Avg
-        
+    def analytics(self, request: Request, pk: Optional[str] = None) -> Response:
+        """Aggregated budget, score, task and decision statistics."""
         project = self.get_object()
-        
+
         selected_options = DecisionNode.objects.filter(
             project=project,
             status='selected'
         ).exclude(node_type='milestone')
-        
+
         total_estimated = Decimal('0')
         total_actual = Decimal('0')
-        
+
         for node in selected_options:
             total_estimated += node.estimated_cost or Decimal('0')
             total_actual += node.actual_cost or node.estimated_cost or Decimal('0')
-        
+
         variance = total_actual - total_estimated
-        
+
         budget_summary = {
             'total_estimated': float(total_estimated),
             'total_actual': float(total_actual),
             'variance': float(variance),
             'variance_percentage': float((variance / total_estimated * 100) if total_estimated > 0 else 0)
         }
-        
+
         budget_by_section = []
         sections = selected_options.values_list('section', flat=True).distinct()
-        
+
         for section in sections:
             section_nodes = selected_options.filter(section=section)
             section_estimated = sum(float(node.estimated_cost or 0) for node in section_nodes)
             section_actual = sum(float(node.actual_cost or node.estimated_cost or 0) for node in section_nodes)
-            
+
             budget_by_section.append({
                 'section': section or 'general',
                 'estimated': section_estimated,
                 'actual': section_actual
             })
-        
+
         scores_avg = selected_options.aggregate(
             comfort=Avg('score_comfort'),
             risk=Avg('score_risk'),
             time=Avg('score_time'),
             pleasure=Avg('score_pleasure')
         )
-        
+
         scores_average = {
             'comfort': round(scores_avg['comfort'] or 50, 1),
             'risk': round(scores_avg['risk'] or 50, 1),
             'time': round(scores_avg['time'] or 50, 1),
             'pleasure': round(scores_avg['pleasure'] or 50, 1)
         }
-        
+
+        score_rows = list(selected_options.values('score_comfort', 'score_risk', 'score_time', 'score_pleasure'))
+        weights = project.criteria_weights
+        project_weighted_score = (
+            sum(weighted_score(row, weights) for row in score_rows) / len(score_rows) if score_rows else 0.0
+        )
+
         all_tasks = Task.objects.filter(node__project=project)
         total_tasks = all_tasks.count()
         completed_tasks = all_tasks.filter(is_completed=True).count()
-        
+
         tasks_summary = {
             'total_tasks': total_tasks,
             'completed_tasks': completed_tasks,
             'pending_tasks': total_tasks - completed_tasks,
             'completion_percentage': round((completed_tasks / total_tasks * 100) if total_tasks > 0 else 0, 1)
         }
-        
+
         all_options = DecisionNode.objects.filter(project=project).exclude(node_type='milestone')
         decisions_summary = {
             'total_options': all_options.count(),
@@ -654,11 +582,12 @@ class ProjectViewSet(viewsets.ModelViewSet):
             'rejected': all_options.filter(status='rejected').count(),
             'pending': all_options.filter(status='pending').count()
         }
-        
+
         return Response({
             'budget_summary': budget_summary,
             'budget_by_section': budget_by_section,
             'scores_average': scores_average,
+            'weighted_score': round(project_weighted_score, 1),
             'tasks_summary': tasks_summary,
             'decisions_summary': decisions_summary
         }, status=status.HTTP_200_OK)
@@ -671,19 +600,19 @@ class ProjectViewSet(viewsets.ModelViewSet):
         """
         project = self.get_object()
         positions_data = request.data.get('positions', [])
-        
+
         if not positions_data:
             return Response(
                 {'error': 'positions array is required'},
                 status=status.HTTP_400_BAD_REQUEST
             )
-        
+
         try:
             node_ids = [pos['id'] for pos in positions_data if 'id' in pos]
             nodes = DecisionNode.objects.filter(project=project, id__in=node_ids)
-            
+
             nodes_map = {node.id: node for node in nodes}
-            
+
             updated_nodes = []
             for pos_data in positions_data:
                 node_id = pos_data.get('id')
@@ -692,16 +621,16 @@ class ProjectViewSet(viewsets.ModelViewSet):
                     node.position_x = float(pos_data.get('position_x', 0))
                     node.position_y = float(pos_data.get('position_y', 0))
                     updated_nodes.append(node)
-            
+
             if updated_nodes:
                 DecisionNode.objects.bulk_update(updated_nodes, ['position_x', 'position_y'])
-            
+
             return Response({
                 'success': True,
                 'message': f'Updated positions for {len(updated_nodes)} nodes',
                 'updated_count': len(updated_nodes)
             }, status=status.HTTP_200_OK)
-        
+
         except Exception as e:
             return Response(
                 {'error': str(e)},
@@ -733,9 +662,9 @@ class DecisionNodeViewSet(viewsets.ModelViewSet):
         return queryset
 
     @action(detail=True, methods=['post'])
-    def generate_subnodes(self, request, pk=None):
+    def generate_subnodes(self, request: Request, pk: Optional[str] = None) -> Response:
         parent_node = self.get_object()
-        
+
         client_ip = self._get_client_ip(request)
         cache_key = f'ai_gen_{pk}_{client_ip}'
         if cache.get(cache_key):
@@ -743,32 +672,31 @@ class DecisionNodeViewSet(viewsets.ModelViewSet):
                 {'error': 'Please wait 30 seconds between AI requests'},
                 status=status.HTTP_429_TOO_MANY_REQUESTS
             )
-        
+
         if not ai_service.enabled:
-            return Response(
-                {'error': 'AI service is not configured. Please set GEMINI_API_KEY environment variable.'},
-                status=status.HTTP_503_SERVICE_UNAVAILABLE
-            )
-        
+            return _ai_unavailable()
+
         project = parent_node.project
         project_context = f"Project: {project.title}. {project.description or ''}"
         budget_context = f"Total budget: ${project.budget_total}. Parent node cost: ${parent_node.estimated_cost}"
         parent_node_text = f"{parent_node.title}. {parent_node.description or ''}"
-        
+
         ai_options = ai_service.generate_options(
             parent_node_text=parent_node_text,
             project_context=project_context,
-            budget_context=budget_context
+            budget_context=budget_context,
+            language=request_language(request),
+            project_id=project.id,
         )
-        
+
         if not ai_options:
             return Response(
                 {'error': 'Failed to generate options from AI. Please try again.'},
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR
             )
-        
+
         cache.set(cache_key, True, 30)
-        
+
         created_nodes = []
         for option in ai_options:
             try:
@@ -777,7 +705,7 @@ class DecisionNodeViewSet(viewsets.ModelViewSet):
                     parent=parent_node,
                     title=option['title'],
                     description=option['description'],
-                    estimated_cost=Decimal(str(option['estimated_cost'])),
+                    estimated_cost=_money(option['estimated_cost']),
                     score_comfort=int(option.get('score_comfort', 50)),
                     score_risk=int(option.get('score_risk', 50)),
                     score_time=int(option.get('score_time', 50)),
@@ -790,7 +718,7 @@ class DecisionNodeViewSet(viewsets.ModelViewSet):
                     {'error': f'Failed to create node: {str(e)}'},
                     status=status.HTTP_500_INTERNAL_SERVER_ERROR
                 )
-        
+
         serializer = DecisionNodeSerializer(created_nodes, many=True)
         return Response({
             'created_nodes': serializer.data,
@@ -801,13 +729,13 @@ class DecisionNodeViewSet(viewsets.ModelViewSet):
     def vote(self, request, pk=None):
         node = self.get_object()
         session_id = request.data.get('session_id', None)
-        
+
         if not session_id:
             return Response(
                 {'error': 'Session ID is required'},
                 status=status.HTTP_400_BAD_REQUEST
             )
-        
+
         ip_address = self._get_client_ip(request)
 
         if Vote.objects.filter(node=node, session_id=session_id).exists():
@@ -827,12 +755,10 @@ class DecisionNodeViewSet(viewsets.ModelViewSet):
             'message': 'Vote added successfully',
             'vote_count': vote_count
         }, status=status.HTTP_201_CREATED)
+
     @action(detail=True, methods=['post'])
-    def generate_tasks(self, request, pk=None):
-        """
-        Generuje zadania AI dla wybranego węzła decyzyjnego
-        POST /api/decision-nodes/{id}/generate_tasks/
-        """
+    def generate_tasks(self, request: Request, pk: Optional[str] = None) -> Response:
+        """Generate AI tasks for a selected decision node."""
         node = self.get_object()
 
         if node.status != 'selected':
@@ -850,14 +776,13 @@ class DecisionNodeViewSet(viewsets.ModelViewSet):
             )
 
         if not ai_service.enabled:
-            return Response(
-                {'error': 'AI service is not configured. Please set GEMINI_API_KEY environment variable.'},
-                status=status.HTTP_503_SERVICE_UNAVAILABLE
-            )
+            return _ai_unavailable()
 
         tasks_list = ai_service.generate_tasks_for_node(
             node_title=node.title,
-            node_description=node.description or ''
+            node_description=node.description or '',
+            language=request_language(request),
+            project_id=node.project_id,
         )
 
         if not tasks_list:
@@ -868,21 +793,13 @@ class DecisionNodeViewSet(viewsets.ModelViewSet):
 
         cache.set(cache_key, True, 30)
 
-        created_tasks = []
-        for task_title in tasks_list:
-            task = Task.objects.create(
-                node=node,
-                title=task_title,
-                is_completed=False
-            )
-            created_tasks.append(task)
+        created_tasks = [Task.objects.create(node=node, title=title[:255], is_completed=False) for title in tasks_list]
 
         serializer = DecisionNodeSerializer(node)
         return Response({
             'node': serializer.data,
             'message': f'Successfully created {len(created_tasks)} tasks'
         }, status=status.HTTP_201_CREATED)
-
 
     def _get_client_ip(self, request):
         x_forwarded_for = request.META.get('HTTP_X_FORWARDED_FOR')
@@ -894,13 +811,10 @@ class DecisionNodeViewSet(viewsets.ModelViewSet):
 
 
 class TaskViewSet(viewsets.ModelViewSet):
-    """
-    ViewSet dla zarządzania zadaniami (CRUD)
-    """
     queryset = Task.objects.select_related('node').all()
     serializer_class = TaskSerializer
     permission_classes = [permissions.AllowAny]
-    
+
     def get_queryset(self):
         queryset = Task.objects.all()
         node_id = self.request.query_params.get('node', None)
@@ -910,14 +824,10 @@ class TaskViewSet(viewsets.ModelViewSet):
 
 
 class CommentViewSet(viewsets.ModelViewSet):
-    """
-    ViewSet dla zarządzania komentarzami (CRUD)
-    Publiczny dostęp - każdy może dodawać komentarze
-    """
     queryset = Comment.objects.select_related('node').all()
     serializer_class = CommentSerializer
     permission_classes = [permissions.AllowAny]
-    
+
     def get_queryset(self):
         queryset = Comment.objects.all()
         node_id = self.request.query_params.get('node', None)
@@ -957,10 +867,7 @@ def public_project_tree_view(request, token):
 
 @api_view(['GET'])
 def public_project_tasks_view(request, token):
-    """
-    Publiczny endpoint dla zadań projektu (Read-Only)
-    GET: /api/public/projects/<uuid:token>/tasks/
-    """
+    """Read-only project tasks for a shared link."""
     try:
         project = Project.objects.get(share_token=token)
     except Project.DoesNotExist:
@@ -968,17 +875,17 @@ def public_project_tasks_view(request, token):
             {'error': 'Project not found'},
             status=status.HTTP_404_NOT_FOUND
         )
-    
+
     tasks = Task.objects.filter(
         node__project=project
     ).select_related('node').order_by('due_date', 'created_at')
-    
+
     serializer = ProjectTaskSerializer(tasks, many=True)
-    
+
     total_tasks = tasks.count()
     completed_tasks = tasks.filter(is_completed=True).count()
     completion_percentage = (completed_tasks / total_tasks * 100) if total_tasks > 0 else 0
-    
+
     return Response({
         'tasks': serializer.data,
         'stats': {
@@ -990,32 +897,82 @@ def public_project_tasks_view(request, token):
     }, status=status.HTTP_200_OK)
 
 
+@api_view(['GET'])
+def llm_metrics_view(request: Request) -> Response:
+    """Aggregated LLM call telemetry over the last `days` calendar days."""
+    days = _int_param(request.query_params.get('days'), default=7, low=1, high=90)
+    today = timezone.localdate()
+    start_date = today - timedelta(days=days - 1)
+    start = timezone.make_aware(datetime.combine(start_date, datetime.min.time()))
+
+    calls = list(
+        LLMCall.objects.filter(created_at__gte=start).values(
+            'created_at', 'operation', 'model', 'latency_ms', 'input_tokens', 'output_tokens',
+            'cost_usd', 'attempts', 'success',
+        )
+    )
+
+    daily = {start_date + timedelta(days=offset): {'calls': 0, 'cost_usd': 0.0, 'failures': 0}
+             for offset in range(days)}
+    for call in calls:
+        bucket = daily.get(timezone.localtime(call['created_at']).date())
+        if bucket is None:
+            continue
+        bucket['calls'] += 1
+        bucket['cost_usd'] += call['cost_usd']
+        bucket['failures'] += 0 if call['success'] else 1
+
+    by_model = []
+    for model, group in _group_calls(calls, 'model'):
+        stats = _call_stats(group)
+        by_model.append({'model': model, 'calls': stats['calls'], 'cost_usd': stats['cost_usd'],
+                         'p50_latency_ms': stats['p50_latency_ms']})
+
+    return Response({
+        'window_days': days,
+        'totals': _call_stats(calls),
+        'by_operation': [{'operation': operation, **_call_stats(group)}
+                         for operation, group in _group_calls(calls, 'operation')],
+        'by_model': by_model,
+        'daily': [{'date': day.isoformat(), **bucket, 'cost_usd': round(bucket['cost_usd'], 6)}
+                  for day, bucket in daily.items()],
+    })
+
+
+@api_view(['GET'])
+def llm_calls_view(request: Request) -> Response:
+    """Most recent LLM calls, newest first."""
+    limit = _int_param(request.query_params.get('limit'), default=50, low=1, high=200)
+    calls = LLMCall.objects.order_by('-created_at', '-id')[:limit]
+    return Response(LLMCallSerializer(calls, many=True).data)
+
+
 @api_view(['POST'])
 def seed_test_project(request):
     """
     Creates a test project with sample nodes for E2E testing.
     Only available when DEBUG=True for security reasons.
-    
+
     Returns:
         - project: Created project data
         - nodes: List of created nodes
         - share_token: Token for public access
     """
     from django.conf import settings
-    
+
     if not settings.DEBUG:
         return Response(
             {'error': 'Testing endpoints are only available in DEBUG mode'},
             status=status.HTTP_403_FORBIDDEN
         )
-    
+
     try:
         project = Project.objects.create(
             title="E2E Test Project",
             description="Automated test project for Playwright E2E tests",
             budget_total=Decimal('50000.00')
         )
-        
+
         root_node = DecisionNode.objects.create(
             project=project,
             title="Test Milestone",
@@ -1029,7 +986,7 @@ def seed_test_project(request):
             status='pending',
             order=1
         )
-        
+
         option_node = DecisionNode.objects.create(
             project=project,
             parent=root_node,
@@ -1044,7 +1001,7 @@ def seed_test_project(request):
             status='pending',
             order=2
         )
-        
+
         DecisionNode.objects.create(
             project=project,
             parent=root_node,
@@ -1059,23 +1016,23 @@ def seed_test_project(request):
             status='pending',
             order=3
         )
-        
+
         Task.objects.create(
             node=option_node,
             title="Test Task",
             is_completed=False
         )
-        
+
         Comment.objects.create(
             node=option_node,
             author_name="Test User",
             content="This is a test comment for E2E testing"
         )
-        
+
         project_serializer = ProjectSerializer(project)
         nodes = DecisionNode.objects.filter(project=project).order_by('order')
         nodes_serializer = DecisionNodeSerializer(nodes, many=True)
-        
+
         return Response({
             'success': True,
             'message': 'Test project created successfully',
@@ -1086,7 +1043,7 @@ def seed_test_project(request):
             'node_count': nodes.count(),
             'root_node_id': root_node.id
         }, status=status.HTTP_201_CREATED)
-        
+
     except Exception as e:
         return Response({
             'success': False,

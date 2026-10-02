@@ -1,6 +1,6 @@
 from django.contrib import admin
 
-from .models import DecisionNode, Project, Vote
+from .models import DecisionNode, LLMCall, Project, Vote
 
 
 @admin.register(Project)
@@ -23,3 +23,17 @@ class VoteAdmin(admin.ModelAdmin):
     list_filter = ['created_at', 'node__project']
     search_fields = ['node__title', 'session_id']
 
+
+@admin.register(LLMCall)
+class LLMCallAdmin(admin.ModelAdmin):
+    list_display = ['created_at', 'operation', 'model', 'success', 'attempts', 'latency_ms',
+                    'input_tokens', 'output_tokens', 'cost_usd', 'project']
+    list_filter = ['operation', 'model', 'success', 'created_at']
+    search_fields = ['operation', 'model', 'error']
+    date_hierarchy = 'created_at'
+
+    def has_add_permission(self, request) -> bool:
+        return False
+
+    def has_change_permission(self, request, obj=None) -> bool:
+        return False

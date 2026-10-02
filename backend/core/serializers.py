@@ -1,6 +1,37 @@
+from typing import Any, Dict
+
 from rest_framework import serializers
 
-from .models import ChatMessage, Comment, DecisionNode, Project, Task
+from core.llm.context import CRITERIA, DEFAULT_WEIGHTS
+
+from .models import ChatMessage, Comment, DecisionNode, LLMCall, Project, Task
+
+MAX_CRITERION_WEIGHT = 5.0
+
+
+class CriteriaWeightsField(serializers.JSONField):
+    def to_internal_value(self, data: Any) -> Dict[str, float]:
+        data = super().to_internal_value(data)
+        if not isinstance(data, dict):
+            raise serializers.ValidationError('Expected an object mapping criteria to weights.')
+        unknown = sorted(set(data) - set(CRITERIA))
+        if unknown:
+            raise serializers.ValidationError(
+                f"Unknown criteria: {', '.join(unknown)}. Allowed: {', '.join(CRITERIA)}."
+            )
+        weights = {}
+        for name, value in data.items():
+            if isinstance(value, bool) or not isinstance(value, (int, float)):
+                raise serializers.ValidationError(f'Weight for {name} must be a number.')
+            if not 0 <= value <= MAX_CRITERION_WEIGHT:
+                raise serializers.ValidationError(
+                    f'Weight for {name} must be between 0 and {MAX_CRITERION_WEIGHT:g}.'
+                )
+            weights[name] = float(value)
+        return weights
+
+    def to_representation(self, value: Any) -> Dict[str, float]:
+        return {**DEFAULT_WEIGHTS, **(value if isinstance(value, dict) else {})}
 
 
 class TaskSerializer(serializers.ModelSerializer):
@@ -11,10 +42,7 @@ class TaskSerializer(serializers.ModelSerializer):
 
 
 class ProjectTaskSerializer(serializers.ModelSerializer):
-    """
-    Serializer dla zadań w kontekście całego projektu (Global Action Board)
-    Zawiera dodatkowe informacje o węźle, do którego należy zadanie
-    """
+    """Task with its node details, used by the project-wide action board."""
     node_title = serializers.CharField(source='node.title', read_only=True)
     node_id = serializers.IntegerField(source='node.id', read_only=True)
     node_section = serializers.CharField(source='node.section', read_only=True)
@@ -72,24 +100,30 @@ class DecisionNodeSerializer(serializers.ModelSerializer):
 
 class ProjectSerializer(serializers.ModelSerializer):
     decision_nodes = DecisionNodeSerializer(many=True, read_only=True)
+    criteria_weights = CriteriaWeightsField(required=False)
 
     class Meta:
         model = Project
         fields = [
             'id', 'title', 'description', 'budget_total', 'share_token',
-            'decision_nodes', 'ui_state', 'created_at', 'updated_at'
+            'decision_nodes', 'ui_state', 'criteria_weights', 'created_at', 'updated_at'
         ]
         read_only_fields = ['created_at', 'updated_at', 'share_token']
+
+    def validate_criteria_weights(self, value: Dict[str, float]) -> Dict[str, float]:
+        current = getattr(self.instance, 'criteria_weights', None)
+        return {**DEFAULT_WEIGHTS, **(current if isinstance(current, dict) else {}), **value}
 
 
 class PublicProjectSerializer(serializers.ModelSerializer):
     decision_nodes = DecisionNodeSerializer(many=True, read_only=True)
+    criteria_weights = CriteriaWeightsField(read_only=True)
 
     class Meta:
         model = Project
         fields = [
             'id', 'title', 'description', 'budget_total',
-            'decision_nodes', 'ui_state', 'created_at', 'updated_at'
+            'decision_nodes', 'ui_state', 'criteria_weights', 'created_at', 'updated_at'
         ]
         read_only_fields = ['created_at', 'updated_at']
 
@@ -133,3 +167,12 @@ class ChatMessageSerializer(serializers.ModelSerializer):
         fields = ['id', 'project', 'role', 'content', 'created_at']
         read_only_fields = ['created_at']
 
+
+class LLMCallSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = LLMCall
+        fields = [
+            'id', 'created_at', 'operation', 'model', 'latency_ms', 'input_tokens', 'output_tokens',
+            'cost_usd', 'attempts', 'success', 'error', 'project'
+        ]
+        read_only_fields = fields

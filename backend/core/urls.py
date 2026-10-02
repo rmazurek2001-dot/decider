@@ -6,6 +6,8 @@ from .views import (
     DecisionNodeViewSet,
     ProjectViewSet,
     TaskViewSet,
+    llm_calls_view,
+    llm_metrics_view,
     public_project_tasks_view,
     public_project_tree_view,
     public_project_view,
@@ -23,6 +25,7 @@ urlpatterns = [
     path('public/projects/<uuid:token>/', public_project_view, name='public-project'),
     path('public/projects/<uuid:token>/tree/', public_project_tree_view, name='public-project-tree'),
     path('public/projects/<uuid:token>/tasks/', public_project_tasks_view, name='public-project-tasks'),
+    path('llm/metrics/', llm_metrics_view, name='llm-metrics'),
+    path('llm/calls/', llm_calls_view, name='llm-calls'),
     path('testing/seed-project/', seed_test_project, name='seed-test-project'),
 ]
-

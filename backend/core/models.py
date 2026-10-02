@@ -1,7 +1,14 @@
 import uuid
+from typing import Dict
 
 from django.core.validators import MinValueValidator
 from django.db import models
+
+from core.llm.context import DEFAULT_WEIGHTS
+
+
+def default_criteria_weights() -> Dict[str, float]:
+    return dict(DEFAULT_WEIGHTS)
 
 
 class Project(models.Model):
@@ -18,6 +25,11 @@ class Project(models.Model):
         default=dict,
         blank=True,
         help_text="Complete UI state: collapsedNodes, viewport, etc."
+    )
+    criteria_weights = models.JSONField(
+        default=default_criteria_weights,
+        blank=True,
+        help_text="Criteria weights (comfort, risk, time, pleasure), each 0-5"
     )
     
     created_at = models.DateTimeField(auto_now_add=True)
@@ -197,9 +209,7 @@ class ChatMessage(models.Model):
 
 
 class Task(models.Model):
-    """
-    Task model - konkretne zadania do wykonania dla wybranej decyzji
-    """
+    """Actionable step for a selected decision."""
     node = models.ForeignKey(
         DecisionNode,
         on_delete=models.CASCADE,
@@ -230,9 +240,7 @@ class Task(models.Model):
 
 
 class Comment(models.Model):
-    """
-    Comment model - komentarze do węzłów decyzyjnych (dyskusja zespołowa)
-    """
+    """Team discussion comment on a decision node."""
     node = models.ForeignKey(
         DecisionNode,
         on_delete=models.CASCADE,
@@ -255,3 +263,32 @@ class Comment(models.Model):
         return f"{self.author_name}: {self.content[:50]}"
 
 
+class LLMCall(models.Model):
+    created_at = models.DateTimeField(auto_now_add=True)
+    operation = models.CharField(max_length=64)
+    model = models.CharField(max_length=100)
+    latency_ms = models.PositiveIntegerField(default=0)
+    input_tokens = models.PositiveIntegerField(default=0)
+    output_tokens = models.PositiveIntegerField(default=0)
+    cost_usd = models.FloatField(default=0.0)
+    attempts = models.PositiveSmallIntegerField(default=1)
+    success = models.BooleanField(default=True)
+    error = models.TextField(blank=True)
+    project = models.ForeignKey(
+        Project,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='llm_calls'
+    )
+
+    class Meta:
+        ordering = ['-created_at']
+        indexes = [
+            models.Index(fields=['created_at']),
+            models.Index(fields=['operation']),
+        ]
+
+    def __str__(self):
+        state = 'ok' if self.success else 'failed'
+        return f"{self.operation} ({self.model}, {state}, {self.latency_ms} ms)"
